@@ -6,32 +6,33 @@
  * It defines BASE_URL (the public URL prefix the app is served from)
  * and the url() helper that all pages use to build links / redirects.
  *
- * Why this matters:
- *   The ERP is installed inside a subfolder on the production domain
- *   (https://seavoyageship.com/erp/), so absolute paths like "/login.php"
- *   would resolve to the domain root and 404. Every link, asset, and
- *   redirect must be built through url() instead.
+ * The ERP is currently deployed on a dedicated subdomain
+ *   https://erp.seavoyageship.com/
+ * so the application lives at the document root of that subdomain
+ * and BASE_URL is "/".
  *
- * To install in a different folder, change BASE_URL below. That's it.
+ * To redeploy in a different location, change BASE_URL below. That's it.
+ *   - Subdomain root    →  define('BASE_URL', '/');         (current)
+ *   - Domain root       →  define('BASE_URL', '/');
  *   - Subfolder /erp/   →  define('BASE_URL', '/erp/');
  *   - Subfolder /svsml/ →  define('BASE_URL', '/svsml/');
- *   - Domain root       →  define('BASE_URL', '/');
  *
  * BASE_URL must always start AND end with a forward slash.
  */
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/erp/');
+    define('BASE_URL', '/');
 }
 
 /**
  * Build a URL relative to BASE_URL.
  *
- *   url()                          => "/erp/"
- *   url('login.php')               => "/erp/login.php"
- *   url('dashboard.php')           => "/erp/dashboard.php"
- *   url('assets/css/style.css')    => "/erp/assets/css/style.css"
- *   url('/login.php')              => "/erp/login.php"   (leading slash tolerated)
+ * With BASE_URL = '/' (subdomain root):
+ *   url()                          => "/"
+ *   url('login.php')               => "/login.php"
+ *   url('dashboard.php')           => "/dashboard.php"
+ *   url('assets/css/style.css')    => "/assets/css/style.css"
+ *   url('/login.php')              => "/login.php"   (leading slash tolerated)
  */
 function url(string $path = ''): string
 {
