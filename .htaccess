@@ -1,7 +1,9 @@
 # =============================================================
 # SVSML-ERP root .htaccess
-# Designed for GoDaddy / cPanel shared hosting,
-# installed in a subfolder (e.g. public_html/erp/).
+# Designed for GoDaddy / cPanel shared hosting on a dedicated
+# subdomain whose document root is set to this directory
+# (e.g. public_html/erp.seavoyageship.com/  ->  https://erp.seavoyageship.com/).
+# Cloudflare-compatible: no rules here interfere with proxying.
 # =============================================================
 
 # No directory listings
@@ -31,20 +33,19 @@ ServerSignature Off
 # -------------------------------------------------------------
 # Rewrite scoping
 #
-# When the ERP is dropped into a subfolder of a domain that
-# already hosts another site (e.g. WordPress at the root), the
-# parent site's .htaccess can have RewriteRules that catch
-# everything under it. Setting RewriteBase here keeps the ERP
-# self-contained, and the "file/dir exists -> stop" rule below
-# guarantees real ERP files (PHP, CSS, JS, uploads) are served
-# as-is and never rewritten by inherited rules.
+# This subdomain is dedicated to the ERP, so RewriteBase is
+# the document root "/". The "file/dir exists -> stop" rule
+# below guarantees real ERP files (PHP, CSS, JS, uploads) are
+# served as-is — important when the parent cPanel account
+# already hosts other sites whose .htaccess rules might be
+# inherited via UserDir / VirtualHost configuration.
 #
-# If you install this in a different folder, edit RewriteBase
+# If you redeploy under a subfolder later, edit RewriteBase
 # below AND BASE_URL in config/app.php.
 # -------------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /erp/
+    RewriteBase /
 
     # If the request maps to a real file or directory, serve it
     # and stop processing further rewrite rules.
