@@ -1,0 +1,31 @@
+# Dependencies
+/vendor/
+composer.lock
+
+# Local config overrides
+config/db.local.php
+.env
+.env.local
+
+# Uploaded files (real data should never be committed)
+/uploads/crew/*
+/uploads/vessels/*
+/uploads/contracts/*
+!/uploads/crew/.gitkeep
+!/uploads/vessels/.gitkeep
+!/uploads/contracts/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Logs
+*.log
+/logs/
+
+# Lock file for one-time installer
+install.lock

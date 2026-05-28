@@ -1,0 +1,16 @@
+{
+    "name": "svsml/erp",
+    "description": "SVSML Crew Management System for RPSL Manning Agency",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-mbstring": "*",
+        "ext-fileinfo": "*",
+        "dompdf/dompdf": "^2.0"
+    },
+    "config": {
+        "platform-check": false
+    }
+}

@@ -1,0 +1,24 @@
+# SVSML-ERP root .htaccess
+# GoDaddy / Apache shared hosting
+
+# Disable directory listing
+Options -Indexes
+
+# Default index
+DirectoryIndex index.php index.html
+
+# Block access to sensitive files at the root
+<FilesMatch "^(\.env|\.gitignore|composer\.json|composer\.lock|README\.md)$">
+    Require all denied
+</FilesMatch>
+
+# Block access to dotfiles in general
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Force UTF-8
+AddDefaultCharset UTF-8
+
+# Disable server signature
+ServerSignature Off
