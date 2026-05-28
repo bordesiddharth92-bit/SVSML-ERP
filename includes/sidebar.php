@@ -13,7 +13,7 @@ $role = $user['role'] ?? null;
     </div>
 
     <nav class="nav">
-        <a class="nav-link" href="/dashboard.php">Dashboard</a>
+        <a class="nav-link" href="<?= asset('dashboard.php') ?>">Dashboard</a>
 
         <?php if (in_array($role, ['admin', 'sub_admin', 'staff'], true)): ?>
             <div class="nav-section">Crew</div>

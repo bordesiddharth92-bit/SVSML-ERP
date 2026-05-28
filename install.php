@@ -10,8 +10,7 @@
  * DELETE THIS FILE from the server after use.
  */
 
-require __DIR__ . '/config/config.php';
-require __DIR__ . '/config/db.php';
+require __DIR__ . '/config/app.php';
 require __DIR__ . '/includes/helpers.php';
 
 // Block re-running
@@ -80,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Install — <?= h(APP_NAME) ?></title>
-    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 </head>
 <body>
 <div class="auth-wrap">
@@ -89,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($success): ?>
             <div class="flash flash-success">
-                Admin account created. <a href="/login.php"><strong>Sign in now &rarr;</strong></a>
+                Admin account created. <a href="<?= asset('login.php') ?>"><strong>Sign in now &rarr;</strong></a>
             </div>
             <p class="help-text">
                 Please <strong>delete install.php</strong> from the server for security.
