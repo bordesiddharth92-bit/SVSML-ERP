@@ -55,42 +55,53 @@ SVSML-ERP/
 
 ## First-Time Setup (cPanel / GoDaddy)
 
-The ERP is designed to live in a **subfolder** of your domain, e.g. `public_html/erp/` so it does not collide with your main website.
+The ERP runs on a **dedicated subdomain**, e.g. `https://erp.seavoyageship.com/`.
+The subdomain's document root is the ERP project folder
+(typically `public_html/erp.seavoyageship.com/`), so the ERP lives at
+the root of that subdomain — there is no `/erp/` URL prefix anywhere.
 
-1. **Create the MySQL database**
-   In cPanel → MySQL Databases, create:
+1. **Create the subdomain in cPanel**
+   - cPanel → Domains → Create A New Domain
+   - Domain: `erp.seavoyageship.com`
+   - Document Root: `public_html/erp.seavoyageship.com`
+   - Cloudflare users: add an `A` (or proxied `CNAME`) record for `erp` pointing at the same origin and turn proxy ON if you want SSL through Cloudflare. The app makes no assumptions that block proxying.
+
+2. **Create the MySQL database**
+   In cPanel → MySQL Databases:
    - a database (e.g. `cpaneluser_svsml`)
    - a user with a strong password
    - grant `ALL PRIVILEGES` on the database to that user
 
-2. **Upload the project**
-   Upload the contents of this repository to `public_html/erp/`. The final URL of the app will be `https://your-domain.com/erp/`.
+3. **Upload the project**
+   Upload the contents of this repository into the subdomain document root
+   (`public_html/erp.seavoyageship.com/`).
 
-3. **Configure DB credentials**
+4. **Configure DB credentials**
    Edit `config/db.php` and set `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`.
 
-4. **(Only if your subfolder is NOT `/erp/`)** Edit two values:
+5. **(Only if you redeploy somewhere else)** edit two values:
    - `config/app.php` → `define('BASE_URL', '/your-folder/');`
    - `.htaccess` (root) → `RewriteBase /your-folder/`
 
-   `BASE_URL` must always start AND end with a forward slash. For domain-root installs, set it to `'/'`.
+   `BASE_URL` must always start AND end with a forward slash. For
+   subdomain-root or domain-root installs, set it to `'/'` (current default).
 
-5. **Import the schema**
+6. **Import the schema**
    In cPanel → phpMyAdmin, select the database and import in this order:
    1. `database/schema.sql`
    2. `database/seed.sql`
 
-6. **Run the installer**
-   Visit `https://your-domain.com/erp/install.php` in your browser.
+7. **Run the installer**
+   Visit `https://erp.seavoyageship.com/install.php` in your browser.
    It will:
    - verify the schema
    - create the first **admin** user
    - write `install.lock` to disable itself
 
-7. **Delete `install.php`** from the server (recommended).
+8. **Delete `install.php`** from the server (recommended).
 
-8. **Log in**
-   Go to `https://your-domain.com/erp/login.php` with the admin credentials you set during install.
+9. **Log in**
+   Go to `https://erp.seavoyageship.com/login.php` with the admin credentials you set during install.
 
 ## Local Development
 
