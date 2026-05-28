@@ -19,10 +19,11 @@ function isLoggedIn(): bool
 }
 
 /** Redirect to staff login if not logged in. */
-function requireLogin(string $redirect = '/login.php'): void
+function requireLogin(?string $redirect = null): void
 {
     if (!isLoggedIn()) {
-        header('Location: ' . $redirect);
+        // Default to the BASE_URL-aware login URL.
+        header('Location: ' . ($redirect ?? url('login.php')));
         exit;
     }
 }

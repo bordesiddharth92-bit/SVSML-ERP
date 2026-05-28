@@ -5,13 +5,12 @@
  * Full crew login flow (passport-number username, first-login
  * password setup, admin toggle) lands in Module 16.
  */
-require __DIR__ . '/config/config.php';
-require __DIR__ . '/config/db.php';
+require __DIR__ . '/config/app.php';
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/helpers.php';
 
 if (isLoggedIn()) {
-    header('Location: /dashboard.php');
+    header('Location: ' . url('dashboard.php'));
     exit;
 }
 
@@ -24,7 +23,7 @@ $pageTitle = 'Crew sign in';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title>Crew sign in &mdash; <?= h(APP_NAME) ?></title>
-    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 </head>
 <body>
 <div class="auth-wrap">
@@ -38,7 +37,7 @@ $pageTitle = 'Crew sign in';
         </div>
 
         <div class="auth-switch">
-            Staff member? <a href="/login.php">Sign in here</a>
+            Staff member? <a href="<?= asset('login.php') ?>">Sign in here</a>
         </div>
     </div>
 </div>
