@@ -1,24 +1,54 @@
+# =============================================================
 # SVSML-ERP root .htaccess
-# GoDaddy / Apache shared hosting
+# Designed for GoDaddy / cPanel shared hosting,
+# installed in a subfolder (e.g. public_html/erp/).
+# =============================================================
 
-# Disable directory listing
+# No directory listings
 Options -Indexes
+Options +FollowSymLinks
 
 # Default index
 DirectoryIndex index.php index.html
 
-# Block access to sensitive files at the root
-<FilesMatch "^(\.env|\.gitignore|composer\.json|composer\.lock|README\.md)$">
-    Require all denied
-</FilesMatch>
+# UTF-8 output
+AddDefaultCharset UTF-8
 
-# Block access to dotfiles in general
+# Hide server version info
+ServerSignature Off
+
+# -------------------------------------------------------------
+# Block direct access to dotfiles + sensitive files at the root
+# -------------------------------------------------------------
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
 
-# Force UTF-8
-AddDefaultCharset UTF-8
+<FilesMatch "^(composer\.json|composer\.lock|README\.md)$">
+    Require all denied
+</FilesMatch>
 
-# Disable server signature
-ServerSignature Off
+# -------------------------------------------------------------
+# Rewrite scoping
+#
+# When the ERP is dropped into a subfolder of a domain that
+# already hosts another site (e.g. WordPress at the root), the
+# parent site's .htaccess can have RewriteRules that catch
+# everything under it. Setting RewriteBase here keeps the ERP
+# self-contained, and the "file/dir exists -> stop" rule below
+# guarantees real ERP files (PHP, CSS, JS, uploads) are served
+# as-is and never rewritten by inherited rules.
+#
+# If you install this in a different folder, edit RewriteBase
+# below AND BASE_URL in config/app.php.
+# -------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /erp/
+
+    # If the request maps to a real file or directory, serve it
+    # and stop processing further rewrite rules.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+</IfModule>

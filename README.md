@@ -55,6 +55,8 @@ SVSML-ERP/
 
 ## First-Time Setup (cPanel / GoDaddy)
 
+The ERP is designed to live in a **subfolder** of your domain, e.g. `public_html/erp/` so it does not collide with your main website.
+
 1. **Create the MySQL database**
    In cPanel → MySQL Databases, create:
    - a database (e.g. `cpaneluser_svsml`)
@@ -62,27 +64,33 @@ SVSML-ERP/
    - grant `ALL PRIVILEGES` on the database to that user
 
 2. **Upload the project**
-   Upload the contents of this repository to `public_html/` (or a subdirectory).
+   Upload the contents of this repository to `public_html/erp/`. The final URL of the app will be `https://your-domain.com/erp/`.
 
 3. **Configure DB credentials**
    Edit `config/db.php` and set `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`.
 
-4. **Import the schema**
-   In cPanel → phpMyAdmin, select the database and import:
+4. **(Only if your subfolder is NOT `/erp/`)** Edit two values:
+   - `config/app.php` → `define('BASE_URL', '/your-folder/');`
+   - `.htaccess` (root) → `RewriteBase /your-folder/`
+
+   `BASE_URL` must always start AND end with a forward slash. For domain-root installs, set it to `'/'`.
+
+5. **Import the schema**
+   In cPanel → phpMyAdmin, select the database and import in this order:
    1. `database/schema.sql`
    2. `database/seed.sql`
 
-5. **Run the installer**
-   Visit `https://your-domain.com/install.php` in your browser.
+6. **Run the installer**
+   Visit `https://your-domain.com/erp/install.php` in your browser.
    It will:
    - verify the schema
    - create the first **admin** user
    - write `install.lock` to disable itself
 
-6. **Delete `install.php`** from the server (recommended).
+7. **Delete `install.php`** from the server (recommended).
 
-7. **Log in**
-   Go to `https://your-domain.com/login.php` with the admin credentials you set during install.
+8. **Log in**
+   Go to `https://your-domain.com/erp/login.php` with the admin credentials you set during install.
 
 ## Local Development
 

@@ -10,7 +10,7 @@ $user      = currentUser();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title><?= h($pageTitle) ?> — <?= h(APP_NAME) ?></title>
-    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 </head>
 <body>
 <div class="layout">
@@ -22,7 +22,7 @@ $user      = currentUser();
                 <?php if ($user): ?>
                     <span class="user-name"><?= h($user['full_name']) ?></span>
                     <span class="user-role badge badge-<?= h($user['role']) ?>"><?= h(strtoupper($user['role'])) ?></span>
-                    <a class="btn btn-ghost" href="/logout.php">Logout</a>
+                    <a class="btn btn-ghost" href="<?= asset('logout.php') ?>">Logout</a>
                 <?php endif; ?>
             </div>
         </header>

@@ -1,7 +1,6 @@
 <?php
 /** Role-based dashboard. Module 1 ships only the skeleton; rich KPIs land in Module 14. */
-require __DIR__ . '/config/config.php';
-require __DIR__ . '/config/db.php';
+require __DIR__ . '/config/app.php';
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/helpers.php';
 

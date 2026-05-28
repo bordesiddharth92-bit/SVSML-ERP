@@ -1,12 +1,11 @@
 <?php
 /** Staff / Admin / Sub-Admin login. */
-require __DIR__ . '/config/config.php';
-require __DIR__ . '/config/db.php';
+require __DIR__ . '/config/app.php';
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/helpers.php';
 
 if (isLoggedIn()) {
-    header('Location: /dashboard.php');
+    header('Location: ' . url('dashboard.php'));
     exit;
 }
 
@@ -24,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($u) {
             loginUser($u);
             flash('success', 'Welcome back, ' . $u['full_name'] . '.');
-            header('Location: /dashboard.php');
+            header('Location: ' . url('dashboard.php'));
             exit;
         }
         $err = 'Invalid email or password.';
@@ -40,7 +39,7 @@ $pageTitle = 'Sign in';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title>Sign in &mdash; <?= h(APP_NAME) ?></title>
-    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 </head>
 <body>
 <div class="auth-wrap">
@@ -52,7 +51,11 @@ $pageTitle = 'Sign in';
             <div class="flash flash-error"><?= h($err) ?></div>
         <?php endif; ?>
 
-        <form method="post" novalidate>
+        <?php foreach (getFlashes() as $f): ?>
+            <div class="flash flash-<?= h($f['type']) ?>"><?= h($f['message']) ?></div>
+        <?php endforeach; ?>
+
+        <form method="post" action="<?= asset('login.php') ?>" novalidate>
             <div class="form-row">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" autocomplete="username" required value="<?= h($email) ?>">
@@ -67,7 +70,7 @@ $pageTitle = 'Sign in';
         </form>
 
         <div class="auth-switch">
-            Crew member? <a href="/crew-login.php">Sign in here</a>
+            Crew member? <a href="<?= asset('crew-login.php') ?>">Sign in here</a>
         </div>
     </div>
 </div>
