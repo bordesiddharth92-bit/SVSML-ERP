@@ -440,9 +440,11 @@ function seedDefaultCoursesForCrew(PDO $pdo, int $crewId, ?int $userId): void
         "SELECT COUNT(*) FROM basic_courses WHERE crew_id = " . $crewId
     )->fetchColumn();
     if ($basicCount === 0) {
+        // Omit created_at — the column has DEFAULT CURRENT_TIMESTAMP in MySQL,
+        // and we don't want to depend on NOW() (works in MySQL but not SQLite).
         $stmt = $pdo->prepare(
-            "INSERT INTO basic_courses (crew_id, course_name, created_by, created_at)
-             VALUES (:c, :n, :u, NOW())"
+            "INSERT INTO basic_courses (crew_id, course_name, created_by)
+             VALUES (:c, :n, :u)"
         );
         foreach (defaultBasicCourseNames() as $n) {
             $stmt->execute([':c' => $crewId, ':n' => $n, ':u' => $userId]);
@@ -454,8 +456,8 @@ function seedDefaultCoursesForCrew(PDO $pdo, int $crewId, ?int $userId): void
     )->fetchColumn();
     if ($advCount === 0) {
         $stmt = $pdo->prepare(
-            "INSERT INTO advanced_courses (crew_id, course_name, created_by, created_at)
-             VALUES (:c, :n, :u, NOW())"
+            "INSERT INTO advanced_courses (crew_id, course_name, created_by)
+             VALUES (:c, :n, :u)"
         );
         foreach (defaultAdvancedCourseNames() as $n) {
             $stmt->execute([':c' => $crewId, ':n' => $n, ':u' => $userId]);
