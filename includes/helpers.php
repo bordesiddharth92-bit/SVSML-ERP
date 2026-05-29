@@ -167,3 +167,110 @@ function getAlertSettings(PDO $pdo): array
     $row = $pdo->query("SELECT * FROM alert_settings ORDER BY id ASC LIMIT 1")->fetch();
     return $cache = $row ?: [];
 }
+
+/* ---------------- CSRF protection ---------------- */
+
+/**
+ * Get (or generate) a per-session CSRF token. Used by every form
+ * that performs a state-changing POST.
+ */
+function csrfToken(): string
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Render the hidden CSRF input. Drop this inside every <form method="post">.
+ */
+function csrfField(): string
+{
+    return '<input type="hidden" name="_csrf" value="'
+         . htmlspecialchars(csrfToken(), ENT_QUOTES, 'UTF-8') . '">';
+}
+
+/**
+ * Verify the CSRF token on a POST. Aborts with 403 on mismatch.
+ * Call this once at the top of any POST handler.
+ */
+function verifyCsrf(): void
+{
+    $sent     = $_POST['_csrf'] ?? '';
+    $expected = $_SESSION['csrf_token'] ?? '';
+    if (!is_string($sent) || $expected === '' || !hash_equals($expected, $sent)) {
+        http_response_code(403);
+        exit('CSRF token mismatch. Reload the page and try again.');
+    }
+}
+
+/* ---------------- Dropdown helpers ---------------- */
+
+/**
+ * The canonical list of dropdown categories the ERP knows about,
+ * in the order they should appear in admin UIs.
+ *
+ * Returns an associative array of slug => human-readable label.
+ */
+function getDropdownCategories(): array
+{
+    return [
+        'visa_type'             => 'Visa Type',
+        'visa_country'          => 'Visa Country',
+        'medical_type'          => 'Medical Type',
+        'ship_type'             => 'Ship Type',
+        'ship_flag'             => 'Ship Flag',
+        'approval_description'  => 'Approval Description',
+        'contract_period'       => 'Contract Period',
+        'relationship'          => 'Relationship',
+    ];
+}
+
+/**
+ * Fetch all dropdown_items in a category.
+ *
+ *   $activeOnly = true  → only is_active=1 rows (use in user-facing selects)
+ *   $activeOnly = false → all rows (use in admin pages)
+ *
+ * Sorted alphabetically with an "Other" suffix pinned to the end,
+ * which matches the seed convention.
+ */
+function getDropdownOptions(PDO $pdo, string $category, bool $activeOnly = true): array
+{
+    $sql = "SELECT id, label, is_active
+              FROM dropdown_items
+             WHERE category = :c"
+         . ($activeOnly ? " AND is_active = 1" : "")
+         . " ORDER BY (label = 'Other'), label";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([':c' => $category]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Render an HTML <select> populated from a dropdown_items category.
+ *
+ *   $name      → form field name
+ *   $category  → dropdown category slug (e.g. 'ship_type')
+ *   $selectedId → currently-selected dropdown_items.id (or null)
+ *   $opts      → ['blank' => 'Choose...', 'required' => true, 'id' => 'foo']
+ *
+ * Used by every later module that renders a category-driven select.
+ */
+function dropdownSelect(PDO $pdo, string $name, string $category, $selectedId = null, array $opts = []): string
+{
+    $rows  = getDropdownOptions($pdo, $category, true);
+    $blank = $opts['blank']    ?? '— Select —';
+    $req   = !empty($opts['required']) ? ' required' : '';
+    $id    = $opts['id']       ?? $name;
+
+    $html  = '<select name="' . h($name) . '" id="' . h($id) . '"' . $req . '>';
+    $html .= '<option value="">' . h($blank) . '</option>';
+    foreach ($rows as $r) {
+        $sel = ((string)$r['id'] === (string)$selectedId) ? ' selected' : '';
+        $html .= '<option value="' . (int)$r['id'] . '"' . $sel . '>' . h($r['label']) . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+}
