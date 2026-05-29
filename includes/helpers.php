@@ -855,3 +855,54 @@ function travelStatusBadge(?string $status): string
     $row = $map[$status] ?? ['class' => 'gray', 'label' => '—'];
     return '<span class="status status-' . h($row['class']) . '">' . h($row['label']) . '</span>';
 }
+
+
+
+/* =========================================================
+   Module 16 — Crew Portal helpers
+   ========================================================= */
+
+/**
+ * Fetch the crew's most recent contract (latest by id). The contract
+ * is where we currently capture photo, place_of_birth, home_town,
+ * next-of-kin, and beneficiary — so the portal pulls those from here
+ * rather than duplicating them on the crew table.
+ *
+ * Returns null when the crew has no contracts yet.
+ */
+function fetchLatestContractForCrew(PDO $pdo, int $crewId): ?array
+{
+    $stmt = $pdo->prepare(
+        "SELECT * FROM contracts WHERE crew_id = :c ORDER BY id DESC LIMIT 1"
+    );
+    $stmt->execute([':c' => $crewId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+/**
+ * Best-effort URL for the crew's profile photo. The contracts table is
+ * the canonical source. Returns '' when no photo is on file so callers
+ * can fall back to initials / placeholder.
+ */
+function crewPhotoUrl(?array $latestContract): string
+{
+    if (!$latestContract || empty($latestContract['photo_path'])) return '';
+    return asset('uploads/' . $latestContract['photo_path']);
+}
+
+/**
+ * Return the two-letter initials for a crew name, used when no photo
+ * is available. e.g. "RAVI KUMAR" → "RK", "PRIYA" → "PR".
+ */
+function crewInitials(string $fullName): string
+{
+    $parts = preg_split('/\s+/u', trim($fullName));
+    if (!$parts) return '?';
+    if (count($parts) === 1) {
+        return mb_strtoupper(mb_substr($parts[0], 0, 2, 'UTF-8'));
+    }
+    $a = mb_substr($parts[0], 0, 1, 'UTF-8');
+    $b = mb_substr(end($parts), 0, 1, 'UTF-8');
+    return mb_strtoupper($a . $b);
+}
