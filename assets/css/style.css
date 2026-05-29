@@ -678,3 +678,29 @@ table.data-table {
     .portal-hero { flex-direction: column; align-items: flex-start; }
     .portal-avatar { width: 56px; height: 56px; font-size: 20px; }
 }
+
+
+
+/* =========================================================
+   Field-level validation (passport / mobile / email / CDC / INDOS)
+   ========================================================= */
+
+.field-error {
+    color: var(--red);
+    font-size: 12px;
+    line-height: 1.3;
+    margin-top: 4px;
+    display: block;
+}
+input.has-error,
+textarea.has-error,
+select.has-error {
+    border-color: var(--red);
+    background-color: #fef2f2;
+}
+input.has-error:focus,
+textarea.has-error:focus,
+select.has-error:focus {
+    outline: 2px solid #fecaca;
+    outline-offset: 0;
+}
