@@ -274,3 +274,74 @@ function dropdownSelect(PDO $pdo, string $name, string $category, $selectedId = 
     $html .= '</select>';
     return $html;
 }
+
+/**
+ * Render an HTML <select> whose option values are the dropdown_items
+ * LABELS (not ids). Used for fields stored as VARCHAR — e.g. vessels.ship_type
+ * and vessels.ship_flag — where the label is what gets persisted.
+ */
+function dropdownSelectByLabel(PDO $pdo, string $name, string $category, ?string $selectedLabel = null, array $opts = []): string
+{
+    $rows  = getDropdownOptions($pdo, $category, true);
+    $blank = $opts['blank']    ?? '— Select —';
+    $req   = !empty($opts['required']) ? ' required' : '';
+    $id    = $opts['id']       ?? $name;
+
+    $html  = '<select name="' . h($name) . '" id="' . h($id) . '"' . $req . '>';
+    $html .= '<option value="">' . h($blank) . '</option>';
+    foreach ($rows as $r) {
+        $sel = ($selectedLabel !== null && $r['label'] === $selectedLabel) ? ' selected' : '';
+        $html .= '<option value="' . h($r['label']) . '"' . $sel . '>' . h($r['label']) . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+}
+
+/* ---------------- Pagination ---------------- */
+
+/**
+ * Render compact pagination links.
+ *
+ *   $page         current page (1-indexed)
+ *   $totalPages   computed as ceil(totalRows / PAGE_SIZE)
+ *   $baseUrl      URL to link to, with all current query params except 'page'
+ *                 (e.g. url('crew.php?company_id=3') — pagination appends
+ *                 &page=2 / ?page=2 as appropriate)
+ *
+ * Returns '' when there is only one page.
+ */
+function paginate(int $page, int $totalPages, string $baseUrl): string
+{
+    if ($totalPages <= 1) return '';
+    $page = max(1, min($page, $totalPages));
+    $sep  = (strpos($baseUrl, '?') === false) ? '?' : '&';
+
+    $link = function (int $p, string $label, bool $disabled = false, bool $current = false) use ($baseUrl, $sep): string {
+        if ($current)  return '<span class="current">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>';
+        if ($disabled) return '<span class="disabled">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>';
+        return '<a href="' . htmlspecialchars($baseUrl . $sep . 'page=' . $p, ENT_QUOTES, 'UTF-8') . '">'
+             . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+    };
+
+    // Window of 5 page numbers around the current page.
+    $start = max(1, $page - 2);
+    $end   = min($totalPages, $start + 4);
+    if ($end - $start < 4) $start = max(1, $end - 4);
+
+    $out  = '<nav class="pagination" aria-label="Pagination">';
+    $out .= $link($page - 1, '« Prev', $page <= 1);
+    if ($start > 1) {
+        $out .= $link(1, '1');
+        if ($start > 2) $out .= '<span class="disabled">…</span>';
+    }
+    for ($p = $start; $p <= $end; $p++) {
+        $out .= $link($p, (string)$p, false, $p === $page);
+    }
+    if ($end < $totalPages) {
+        if ($end < $totalPages - 1) $out .= '<span class="disabled">…</span>';
+        $out .= $link($totalPages, (string)$totalPages);
+    }
+    $out .= $link($page + 1, 'Next »', $page >= $totalPages);
+    $out .= '</nav>';
+    return $out;
+}

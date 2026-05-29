@@ -11,6 +11,10 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
 /**
  * Render a navigation link. $href can be null (= disabled stub).
+ *
+ * Active-link detection treats vessel-edit.php as part of "Vessels"
+ * and crew-edit.php as part of "Crew List", so the sidebar still
+ * highlights the right section when the user drills into an edit page.
  */
 function nav_link(?string $href, string $label, string $current, ?string $tooltip = null): string
 {
@@ -18,7 +22,15 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
         $title = $tooltip ? ' title="' . h($tooltip) . '"' : '';
         return '<a class="nav-link disabled"' . $title . '>' . h($label) . '</a>';
     }
-    $active = (basename($href) === $current) ? ' active' : '';
+    $hrefBase = basename($href);
+    // Group edit pages with their list page for highlighting purposes.
+    static $editGroups = [
+        'vessels.php' => ['vessel-edit.php'],
+        'crew.php'    => ['crew-edit.php'],
+    ];
+    $isActive = ($hrefBase === $current)
+        || (isset($editGroups[$hrefBase]) && in_array($current, $editGroups[$hrefBase], true));
+    $active = $isActive ? ' active' : '';
     return '<a class="nav-link' . $active . '" href="' . asset($href) . '">' . h($label) . '</a>';
 }
 ?>
@@ -33,14 +45,15 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
 
         <?php if (in_array($role, ['admin', 'sub_admin', 'staff'], true)): ?>
             <div class="nav-section">Crew</div>
-            <?= nav_link(null, 'Crew List', $current, 'Coming in Module 4') ?>
-            <?= nav_link(null, 'Add Crew',  $current, 'Coming in Module 4') ?>
+            <?= nav_link('crew.php',      'Crew List', $current) ?>
+            <?= nav_link('crew-edit.php', 'Add Crew',  $current) ?>
 
             <div class="nav-section">Operations</div>
-            <?= nav_link(null, 'Companies & Vessels', $current, 'Coming in Module 3') ?>
-            <?= nav_link(null, 'Sign On / Off',       $current, 'Coming in Module 7') ?>
-            <?= nav_link(null, 'Contracts',           $current, 'Coming in Module 8') ?>
-            <?= nav_link(null, 'Travel Details',      $current, 'Coming in Module 9') ?>
+            <?= nav_link('companies.php', 'Companies', $current) ?>
+            <?= nav_link('vessels.php',   'Vessels',   $current) ?>
+            <?= nav_link(null, 'Sign On / Off', $current, 'Coming in Module 7') ?>
+            <?= nav_link(null, 'Contracts',     $current, 'Coming in Module 8') ?>
+            <?= nav_link(null, 'Travel Details',$current, 'Coming in Module 9') ?>
 
             <div class="nav-section">Approvals</div>
             <?= nav_link(null, 'Client Approval', $current, 'Coming in Module 10') ?>

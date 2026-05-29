@@ -23,4 +23,23 @@
             setTimeout(function () { el.remove(); }, 350);
         });
     }, 6000);
+
+    // ---- Module 4: source-type toggle on crew-edit.php ----
+    // Show / hide the "source staff" select based on the source_type radio.
+    function syncSourceStaffField() {
+        var staffField = document.getElementById('source_staff_field');
+        if (!staffField) return;
+        var picked = document.querySelector('input[name="source_type"]:checked');
+        var show = picked && picked.value === 'staff';
+        staffField.classList.toggle('is-shown', show);
+        // Keep the underlying select disabled when hidden so it isn't submitted.
+        var sel = staffField.querySelector('select, input');
+        if (sel) sel.disabled = !show;
+    }
+    document.addEventListener('change', function (ev) {
+        if (ev.target.matches('input[name="source_type"]')) {
+            syncSourceStaffField();
+        }
+    });
+    document.addEventListener('DOMContentLoaded', syncSourceStaffField);
 })();
