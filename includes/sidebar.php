@@ -25,14 +25,20 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
     $hrefBase = basename($href);
     // Group edit pages with their list page for highlighting purposes.
     static $editGroups = [
-        'vessels.php' => ['vessel-edit.php'],
-        'crew.php'    => [
+        'vessels.php'   => ['vessel-edit.php'],
+        'crew.php'      => [
             'crew-edit.php',
             'crew-documents.php',
             'crew-medical.php',
             'crew-courses.php',
             'crew-sailing-history.php',
+            'crew-signon.php',
+            'crew-contracts.php',
+            'crew-travel.php',
         ],
+        'signon.php'    => ['crew-signon.php'],
+        'contracts.php' => ['crew-contracts.php'],
+        'travel.php'    => ['crew-travel.php'],
     ];
     $isActive = ($hrefBase === $current)
         || (isset($editGroups[$hrefBase]) && in_array($current, $editGroups[$hrefBase], true));
@@ -57,9 +63,9 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
             <div class="nav-section">Operations</div>
             <?= nav_link('companies.php', 'Companies', $current) ?>
             <?= nav_link('vessels.php',   'Vessels',   $current) ?>
-            <?= nav_link(null, 'Sign On / Off', $current, 'Coming in Module 7') ?>
-            <?= nav_link(null, 'Contracts',     $current, 'Coming in Module 8') ?>
-            <?= nav_link(null, 'Travel Details',$current, 'Coming in Module 9') ?>
+            <?= nav_link('signon.php',    'Sign On / Off',  $current) ?>
+            <?= nav_link('contracts.php', 'Contracts',      $current) ?>
+            <?= nav_link('travel.php',    'Travel Details', $current) ?>
 
             <div class="nav-section">Approvals</div>
             <?= nav_link(null, 'Client Approval', $current, 'Coming in Module 10') ?>

@@ -120,11 +120,11 @@ Modules are delivered one at a time. Currently delivered:
 - [x] **Module 2** — Dropdowns / Settings
 - [x] **Module 3** — Companies & Vessels
 - [x] **Module 4** — Crew Personal Details
-- [x] **Module 5** — Documents + Courses + Medical (this PR)
-- [x] **Module 6** — Sailing History (this PR)
-- [ ] Module 7 — Sign On / Sign Off
-- [ ] Module 8 — Contracts (dompdf)
-- [ ] Module 9 — Travel Details
+- [x] **Module 5** — Documents + Courses + Medical
+- [x] **Module 6** — Sailing History
+- [x] **Module 7** — Sign On / Sign Off (this PR)
+- [x] **Module 8** — Contracts (dompdf) (this PR)
+- [x] **Module 9** — Travel Details (this PR)
 - [ ] Module 10 — Client Approval
 - [ ] Module 11 — SVSML Approval
 - [ ] Module 12 — Quick Approval
@@ -132,6 +132,37 @@ Modules are delivered one at a time. Currently delivered:
 - [ ] Module 14 — Dashboard
 - [ ] Module 15 — Expiry Alerts Page
 - [ ] Module 16 — Crew Login
+
+## Composer setup (one-time, required for Module 8 PDF generation)
+
+Module 8 uses [dompdf](https://github.com/dompdf/dompdf) to render contract
+PDFs. The dependency is already declared in `composer.json` but the
+`vendor/` directory is intentionally not committed.
+
+**Option A — install via cPanel Terminal (recommended):**
+
+```bash
+cd ~/public_html/erp.seavoyageship.com
+composer install --no-dev --optimize-autoloader
+```
+
+That writes `vendor/autoload.php` and the dompdf classes. After it
+finishes, the **Generate PDF** button on `crew-contracts.php` works.
+
+**Option B — pre-build locally and upload `vendor/`:**
+
+```bash
+# on your local machine
+git clone https://github.com/bordesiddharth92-bit/SVSML-ERP.git
+cd SVSML-ERP
+composer install --no-dev --optimize-autoloader
+
+# upload the vendor/ directory to public_html/erp.seavoyageship.com/
+```
+
+If neither option is run, the contracts page still works for adding /
+editing rows. Clicking **Generate PDF** simply shows a friendly error
+explaining the setup step instead of crashing.
 
 ## Conventions
 

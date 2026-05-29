@@ -462,14 +462,6 @@ endif;
     </form>
 </div>
 
-<?php if ($isEditing): ?>
-    <div class="card">
-        <h3 class="card-title">Coming soon</h3>
-        <p class="help-text">
-            Sign-on / off (Module 7), contracts (Module 8) and travel (Module 9)
-            will appear in the tabs above once those modules ship.
-        </p>
-    </div>
-<?php endif; ?>
+<?php /* All later modules now ship - no "Coming soon" placeholder. */ ?>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

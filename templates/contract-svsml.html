@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>SVSML Contract — {{reference_number}}</title>
+    <style>
+        @page { margin: 22mm 18mm 22mm 18mm; }
+        body  { font-family: DejaVu Sans, sans-serif; color: #111; font-size: 11pt; line-height: 1.45; }
+        h1, h2, h3 { color: #1a56db; margin: 0 0 6px; }
+        h1 { font-size: 18pt; text-align: center; letter-spacing: 1px; }
+        h2 { font-size: 13pt; margin-top: 14pt; padding-bottom: 3pt; border-bottom: 1pt solid #ccc; }
+        .ref-line { text-align: center; font-size: 10pt; color: #555; margin-top: 0; }
+        table.kv { width: 100%; border-collapse: collapse; margin-top: 6pt; }
+        table.kv th { width: 40%; text-align: left; padding: 4pt 6pt; background: #f3f4f6; font-weight: 600; vertical-align: top; }
+        table.kv td { padding: 4pt 6pt; vertical-align: top; }
+        .signature-grid { width: 100%; margin-top: 28pt; }
+        .signature-grid td { width: 50%; vertical-align: bottom; padding-top: 60pt; }
+        .signature-line { border-top: 1pt solid #000; padding-top: 4pt; font-size: 10pt; }
+        .footer-text { font-size: 9pt; color: #555; margin-top: 18pt; text-align: justify; }
+    </style>
+</head>
+<body>
+
+<h1>{{company_short_name}} — Crew Employment Contract</h1>
+<p class="ref-line">Reference No: <strong>{{reference_number}}</strong> &nbsp;|&nbsp; Contract date: {{contract_date}}</p>
+
+<h2>Seafarer Details</h2>
+<table class="kv">
+    <tr><th>Full name</th>           <td>{{crew_name}}</td></tr>
+    <tr><th>Date of birth (Age)</th> <td>{{date_of_birth}} ({{age}} years)</td></tr>
+    <tr><th>Place of birth</th>      <td>{{place_of_birth}}</td></tr>
+    <tr><th>Home town</th>           <td>{{home_town}}</td></tr>
+    <tr><th>Nearest airport</th>     <td>{{nearest_airport}}</td></tr>
+    <tr><th>Passport number</th>     <td>{{passport_number}}</td></tr>
+    <tr><th>CDC number</th>          <td>{{cdc_number}}</td></tr>
+    <tr><th>INDOS number</th>        <td>{{indos_number}}</td></tr>
+</table>
+
+<h2>Engagement</h2>
+<table class="kv">
+    <tr><th>Rank</th>               <td>{{rank}}</td></tr>
+    <tr><th>Vessel</th>             <td>{{vessel}}</td></tr>
+    <tr><th>Company / Owner</th>    <td>{{company}}</td></tr>
+    <tr><th>Contract period</th>    <td>{{contract_period}}</td></tr>
+    <tr><th>Commencement date</th>  <td>{{commencement_date}}</td></tr>
+    <tr><th>Total monthly salary</th><td>{{salary}}</td></tr>
+</table>
+
+<h2>Next of Kin</h2>
+<table class="kv">
+    <tr><th>Name</th>          <td>{{next_of_kin_name}}</td></tr>
+    <tr><th>Relationship</th>  <td>{{next_of_kin_relationship}}</td></tr>
+    <tr><th>Contact</th>       <td>{{next_of_kin_contact}}</td></tr>
+    <tr><th>Email</th>         <td>{{next_of_kin_email}}</td></tr>
+    <tr><th>Address</th>       <td>{{next_of_kin_address}}</td></tr>
+</table>
+
+<h2>Beneficiary</h2>
+<table class="kv">
+    <tr><th>Name</th>          <td>{{beneficiary_name}}</td></tr>
+    <tr><th>Relationship</th>  <td>{{beneficiary_relationship}}</td></tr>
+    <tr><th>Percentage</th>    <td>{{beneficiary_percentage}}%</td></tr>
+</table>
+
+<table class="signature-grid">
+    <tr>
+        <td><div class="signature-line">Seafarer signature &amp; date</div></td>
+        <td><div class="signature-line">For {{company_short_name}} (RPSL: {{rpsl_number}})</div></td>
+    </tr>
+</table>
+
+<p class="footer-text">{{contract_footer_text}}</p>
+
+</body>
+</html>

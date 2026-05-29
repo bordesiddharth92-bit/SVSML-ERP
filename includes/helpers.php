@@ -485,3 +485,134 @@ function daysBetween(?string $from, ?string $to): ?int
     $diff = (int)$d1->diff($d2)->format('%r%a');
     return abs($diff) + 1;
 }
+
+
+
+/* ---------------- Module 7 (Sign On / Off) ---------------- */
+
+/**
+ * Compute a colour-coded status pill for a sign-on event.
+ *
+ * Returns ['class' => 'green'|'yellow'|'red'|'gray', 'label' => string, 'days' => int|null].
+ *
+ * - If sign-off is set: gray "<n> days (closed)".
+ * - Otherwise (still onboard): days from sign-on to today, classified by
+ *   alert_settings.sign_on_yellow_days / sign_on_red_days. Defaults match
+ *   the seed (yellow=150, red=180).
+ */
+function signOnDurationStatus(?string $signOn, ?string $signOff, array $alerts = []): array
+{
+    if (empty($signOn)) {
+        return ['class' => 'gray', 'label' => 'No sign-on', 'days' => null];
+    }
+    $start = DateTime::createFromFormat('Y-m-d', $signOn);
+    if (!$start) {
+        return ['class' => 'gray', 'label' => 'Invalid', 'days' => null];
+    }
+
+    if (!empty($signOff)) {
+        $end = DateTime::createFromFormat('Y-m-d', $signOff);
+        if ($end) {
+            $days = (int)$start->diff($end)->format('%a') + 1;
+            return ['class' => 'gray', 'label' => $days . ' days (closed)', 'days' => $days];
+        }
+    }
+
+    // Currently onboard — days from sign-on to today.
+    $today  = new DateTime('today');
+    $days   = (int)$start->diff($today)->format('%a');
+    $yellow = (int)($alerts['sign_on_yellow_days'] ?? 150);
+    $red    = (int)($alerts['sign_on_red_days']    ?? 180);
+
+    if ($days >= $red)    return ['class' => 'red',    'label' => $days . ' days onboard', 'days' => $days];
+    if ($days >= $yellow) return ['class' => 'yellow', 'label' => $days . ' days onboard', 'days' => $days];
+    return ['class' => 'green', 'label' => $days . ' days onboard', 'days' => $days];
+}
+
+/* ---------------- Module 8 (Contracts) ---------------- */
+
+/**
+ * Generate the next contract reference number in the SVSML/YYYY/NNN format.
+ * Sequential per calendar year, 3-digit zero-padded suffix.
+ *
+ * Note: not transactionally race-safe, but on a low-concurrency manning
+ * agency workload this is fine. If two contracts are generated in the
+ * same second the second INSERT will fail uniqueness (reference_number is
+ * a UNIQUE column) and the user is asked to retry.
+ */
+function nextContractReferenceNumber(PDO $pdo, ?int $year = null): string
+{
+    $year = $year ?? (int)date('Y');
+    $like = sprintf('SVSML/%d/%%', $year);
+    $stmt = $pdo->prepare(
+        "SELECT reference_number FROM contracts
+          WHERE reference_number LIKE :like
+          ORDER BY id DESC
+          LIMIT 1"
+    );
+    $stmt->execute([':like' => $like]);
+    $last = $stmt->fetchColumn();
+
+    $nextSeq = 1;
+    if ($last) {
+        $parts = explode('/', $last);
+        if (count($parts) === 3) {
+            $nextSeq = (int)$parts[2] + 1;
+        }
+    }
+    return sprintf('SVSML/%d/%03d', $year, $nextSeq);
+}
+
+/**
+ * Substitute placeholders in a contract template.
+ * Replaces {{key}} with the matching $vars[key] (HTML-escaped).
+ *
+ * Unknown placeholders are left in place so the operator notices missing
+ * data rather than silently shipping a contract with empty fields.
+ */
+function fillContractTemplate(string $template, array $vars): string
+{
+    $out = $template;
+    foreach ($vars as $key => $val) {
+        $out = str_replace(
+            '{{' . $key . '}}',
+            htmlspecialchars((string)($val ?? ''), ENT_QUOTES, 'UTF-8'),
+            $out
+        );
+    }
+    return $out;
+}
+
+/**
+ * Compute age in years from a date_of_birth string. Returns '' for missing
+ * or invalid input so it renders cleanly inside contract templates.
+ */
+function ageFromDOB(?string $dob): string
+{
+    if (empty($dob)) return '';
+    $d = DateTime::createFromFormat('Y-m-d', $dob);
+    if (!$d) return '';
+    $today = new DateTime('today');
+    return (string)$today->diff($d)->y;
+}
+
+/* ---------------- Module 9 (Travel) ---------------- */
+
+/**
+ * Render a coloured pill for travel_details.final_status ENUM.
+ * Null / empty values render as a gray placeholder so the operator can
+ * distinguish "not set" from explicitly Pending.
+ */
+function travelStatusBadge(?string $status): string
+{
+    if ($status === null || $status === '') {
+        return '<span class="status status-gray">—</span>';
+    }
+    $map = [
+        'valid'   => ['class' => 'green',  'label' => 'Valid'],
+        'pending' => ['class' => 'yellow', 'label' => 'Pending'],
+        'invalid' => ['class' => 'red',    'label' => 'Invalid'],
+    ];
+    $row = $map[$status] ?? ['class' => 'gray', 'label' => '—'];
+    return '<span class="status status-' . h($row['class']) . '">' . h($row['label']) . '</span>';
+}
