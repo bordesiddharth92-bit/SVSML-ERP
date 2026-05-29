@@ -122,16 +122,50 @@ Modules are delivered one at a time. Currently delivered:
 - [x] **Module 4** — Crew Personal Details
 - [x] **Module 5** — Documents + Courses + Medical
 - [x] **Module 6** — Sailing History
-- [x] **Module 7** — Sign On / Sign Off (this PR)
-- [x] **Module 8** — Contracts (dompdf) (this PR)
-- [x] **Module 9** — Travel Details (this PR)
-- [ ] Module 10 — Client Approval
-- [ ] Module 11 — SVSML Approval
-- [ ] Module 12 — Quick Approval
-- [ ] Module 13 — Staff Activity Log
-- [ ] Module 14 — Dashboard
-- [ ] Module 15 — Expiry Alerts Page
-- [ ] Module 16 — Crew Login
+- [x] **Module 7** — Sign On / Sign Off
+- [x] **Module 8** — Contracts (dompdf)
+- [x] **Module 9** — Travel Details
+- [x] **Module 10** — Client Approval
+- [x] **Module 11** — SVSML Approval
+- [x] **Module 12** — Quick Approval
+- [x] **Module 13** — Staff Activity Log
+- [x] **Module 14** — Dashboard (role-based KPIs)
+- [x] **Module 15** — Expiry Alerts Page
+- [x] **Module 16** — Crew Login
+
+## Upgrading an existing install
+
+When pulling a new release, always import any `CHANGES.sql` that ships
+in that release before exercising the new pages. The current release adds
+three columns to the `crew` table (Module 16 portal authentication):
+
+```bash
+# from cPanel → phpMyAdmin → select the database → "Import" CHANGES.sql
+# OR from the command line:
+mysql -u svsml_user -p svsml_erp < CHANGES.sql
+```
+
+`CHANGES.sql` is idempotent — re-running it is safe.
+
+## Module 16 — Crew Login setup
+
+After importing `CHANGES.sql`:
+
+1. Log in as **admin**.
+2. Open any crew profile (`/crew-edit.php?id=N`).
+3. Tick **"Allow this crew to sign in to the portal"**.
+4. Use the new **"Crew Portal Password"** card to set a password
+   (minimum 8 characters).
+5. Share the password with the crew member through a secure channel.
+
+The crew member can then sign in at `/crew-login.php` using their
+**passport number** + the password you set. They land on
+`/crew-portal.php` — a read-only summary of all their data
+(personal details, documents, medical, courses, sailing history,
+sign on/off, contracts, travel) plus a **Change my password** form.
+
+The master switch is **System Settings → Crew Self-Login Enabled**;
+turning it off blocks the portal across the board.
 
 ## Composer setup (one-time, required for Module 8 PDF generation)
 

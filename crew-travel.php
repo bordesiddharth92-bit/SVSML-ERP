@@ -63,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $detailLabel = trim($_POST['detail_label'] ?? '');
         $fieldType   = ($_POST['field_type'] ?? 'custom') === 'default' ? 'default' : 'custom';
-        $departure   = trim($_POST['departure']    ?? '');
-        $arrival     = trim($_POST['arrival']      ?? '');
+        $departure   = parseTravelDateTimeForStorage($_POST['departure'] ?? '');
+        $arrival     = parseTravelDateTimeForStorage($_POST['arrival']   ?? '');
         $remarks     = trim($_POST['remarks']      ?? '');
         $finalStatus = $_POST['final_status'] ?? 'pending';
         if (!in_array($finalStatus, ['valid','pending','invalid'], true)) $finalStatus = 'pending';
@@ -101,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':c'  => $crewId,
                 ':sr' => $next,
                 ':dl' => $detailLabel,
-                ':dep'=> $departure !== '' ? $departure : null,
-                ':arr'=> $arrival   !== '' ? $arrival   : null,
+                ':dep'=> $departure !== null && $departure !== '' ? $departure : null,
+                ':arr'=> $arrival   !== null && $arrival   !== '' ? $arrival   : null,
                 ':id' => $isDone,
                 ':fs' => $finalStatus,
                 ':rm' => $remarks !== '' ? $remarks : null,
@@ -123,8 +123,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'update') {
         $rowId       = (int)($_POST['travel_id'] ?? 0);
         $detailLabel = trim($_POST['detail_label'] ?? '');
-        $departure   = trim($_POST['departure']    ?? '');
-        $arrival     = trim($_POST['arrival']      ?? '');
+        $departure   = parseTravelDateTimeForStorage($_POST['departure'] ?? '');
+        $arrival     = parseTravelDateTimeForStorage($_POST['arrival']   ?? '');
         $remarks     = trim($_POST['remarks']      ?? '');
         $finalStatus = $_POST['final_status'] ?? 'pending';
         if (!in_array($finalStatus, ['valid','pending','invalid'], true)) $finalStatus = 'pending';
@@ -161,8 +161,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             $stmt->execute([
                 ':dl' => $detailLabel,
-                ':dep'=> $departure !== '' ? $departure : null,
-                ':arr'=> $arrival   !== '' ? $arrival   : null,
+                ':dep'=> $departure !== null && $departure !== '' ? $departure : null,
+                ':arr'=> $arrival   !== null && $arrival   !== '' ? $arrival   : null,
                 ':id' => $isDone,
                 ':fs' => $finalStatus,
                 ':rm' => $remarks !== '' ? $remarks : null,
@@ -246,8 +246,8 @@ include __DIR__ . '/includes/crew-tabs.php';
                             <input type="hidden" name="travel_id" value="<?= (int)$row['id'] ?>">
                             <td><strong><?= (int)$row['sr_number'] ?></strong></td>
                             <td><input type="text" name="detail_label" maxlength="100" required value="<?= h($row['detail_label']) ?>"></td>
-                            <td><input type="text" name="departure"     maxlength="100"          value="<?= h($row['departure'] ?? '') ?>"></td>
-                            <td><input type="text" name="arrival"       maxlength="100"          value="<?= h($row['arrival']   ?? '') ?>"></td>
+                            <td><input type="datetime-local" name="departure" value="<?= h(formatTravelDateTimeForInput($row['departure'] ?? '')) ?>"></td>
+                            <td><input type="datetime-local" name="arrival"   value="<?= h(formatTravelDateTimeForInput($row['arrival']   ?? '')) ?>"></td>
                             <td>
                                 <label style="font-weight:400;">
                                     <input type="checkbox" name="is_done" value="1" <?= (int)$row['is_done'] ? 'checked' : '' ?>>
@@ -304,8 +304,8 @@ include __DIR__ . '/includes/crew-tabs.php';
                     <input type="hidden" name="action"      value="update">
                     <input type="hidden" name="travel_id"   value="<?= (int)$row['id'] ?>">
                     <input type="hidden" name="detail_label" value="<?= h($row['detail_label']) ?>">
-                    <input type="hidden" name="departure"    value="<?= h($row['departure'] ?? '') ?>">
-                    <input type="hidden" name="arrival"      value="<?= h($row['arrival']   ?? '') ?>">
+                    <input type="hidden" name="departure"    value="<?= h(formatTravelDateTimeForInput($row['departure'] ?? '')) ?>">
+                    <input type="hidden" name="arrival"      value="<?= h(formatTravelDateTimeForInput($row['arrival']   ?? '')) ?>">
                     <input type="hidden" name="is_done"      value="<?= (int)$row['is_done'] ?>">
                     <input type="hidden" name="final_status" value="<?= h($row['final_status']) ?>">
                     <div class="form-row">
@@ -344,8 +344,8 @@ include __DIR__ . '/includes/crew-tabs.php';
         <input type="hidden" name="field_type" value="custom">
         <div class="form-grid">
             <div class="form-row full-row"><label>Label *</label> <input type="text" name="detail_label" maxlength="100" required></div>
-            <div class="form-row"><label>Departure</label>        <input type="text" name="departure" maxlength="100"></div>
-            <div class="form-row"><label>Arrival</label>          <input type="text" name="arrival"   maxlength="100"></div>
+            <div class="form-row"><label>Departure</label>        <input type="datetime-local" name="departure"></div>
+            <div class="form-row"><label>Arrival</label>          <input type="datetime-local" name="arrival"></div>
             <div class="form-row">
                 <label>Status</label>
                 <select name="final_status">

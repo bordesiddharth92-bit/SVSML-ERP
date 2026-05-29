@@ -16,14 +16,16 @@
 $crewId = (int)($crew['id'] ?? 0);
 
 $tabs = [
-    'personal'  => ['label' => 'Personal',          'href' => 'crew-edit.php?id='            . $crewId, 'available' => true],
-    'documents' => ['label' => 'Documents',         'href' => 'crew-documents.php?id='       . $crewId, 'available' => true],
-    'medical'   => ['label' => 'Medical',           'href' => 'crew-medical.php?id='         . $crewId, 'available' => true],
-    'courses'   => ['label' => 'Courses',           'href' => 'crew-courses.php?id='         . $crewId, 'available' => true],
-    'sailing'   => ['label' => 'Sailing history',   'href' => 'crew-sailing-history.php?id=' . $crewId, 'available' => true],
-    'signon'    => ['label' => 'Sign on/off',        'href' => 'crew-signon.php?id='          . $crewId, 'available' => true],
-    'contract'  => ['label' => 'Contract',           'href' => 'crew-contracts.php?id='       . $crewId, 'available' => true],
-    'travel'    => ['label' => 'Travel',             'href' => 'crew-travel.php?id='          . $crewId, 'available' => true],
+    'personal'         => ['label' => 'Personal',          'href' => 'crew-edit.php?id='              . $crewId, 'available' => true],
+    'documents'        => ['label' => 'Documents',         'href' => 'crew-documents.php?id='         . $crewId, 'available' => true],
+    'medical'          => ['label' => 'Medical',           'href' => 'crew-medical.php?id='           . $crewId, 'available' => true],
+    'courses'          => ['label' => 'Courses',           'href' => 'crew-courses.php?id='           . $crewId, 'available' => true],
+    'sailing'          => ['label' => 'Sailing history',   'href' => 'crew-sailing-history.php?id='   . $crewId, 'available' => true],
+    'signon'           => ['label' => 'Sign on/off',        'href' => 'crew-signon.php?id='            . $crewId, 'available' => true],
+    'contract'         => ['label' => 'Contract',           'href' => 'crew-contracts.php?id='         . $crewId, 'available' => true],
+    'travel'           => ['label' => 'Travel',             'href' => 'crew-travel.php?id='            . $crewId, 'available' => true],
+    'client_approvals' => ['label' => 'Client approvals',   'href' => 'crew-client-approvals.php?id=' . $crewId, 'available' => true],
+    'svsml_approvals'  => ['label' => 'SVSML approvals',    'href' => 'crew-svsml-approvals.php?id='  . $crewId, 'available' => true],
 ];
 
 $currentTab = $currentTab ?? 'personal';

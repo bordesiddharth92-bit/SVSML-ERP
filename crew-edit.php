@@ -40,6 +40,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $postId = (int)($_POST['crew_id'] ?? 0);
 
+    /* ----- Module 16: set / clear crew portal password ----- */
+    if (($action === 'set_password' || $action === 'clear_password') && $postId > 0 && $canToggleAccess) {
+        try {
+            if ($action === 'set_password') {
+                $new     = (string)($_POST['new_password']     ?? '');
+                $confirm = (string)($_POST['confirm_password'] ?? '');
+                if (mb_strlen($new) < 8)  flash('error', 'Password must be at least 8 characters.');
+                elseif ($new !== $confirm) flash('error', 'Password and confirmation do not match.');
+                else {
+                    $hash = password_hash($new, PASSWORD_BCRYPT);
+                    $pdo->prepare(
+                        "UPDATE crew SET password_hash = :h, password_set_at = CURRENT_TIMESTAMP WHERE id = :i"
+                    )->execute([':h' => $hash, ':i' => $postId]);
+                    logActivity(
+                        $pdo, $user['id'], 'update', 'crew_password', $postId,
+                        "Set portal password for crew {$postId}"
+                    );
+                    flash('success', 'Crew portal password set.');
+                }
+            } else { // clear_password
+                $pdo->prepare(
+                    "UPDATE crew SET password_hash = NULL, password_set_at = NULL WHERE id = :i"
+                )->execute([':i' => $postId]);
+                logActivity(
+                    $pdo, $user['id'], 'update', 'crew_password', $postId,
+                    "Cleared portal password for crew {$postId}"
+                );
+                flash('success', 'Crew portal password cleared.');
+            }
+        } catch (PDOException $e) {
+            error_log('[SVSML-ERP] crew password update failed: ' . $e->getMessage());
+            flash('error', 'Database error — has CHANGES.sql been applied?');
+        }
+        header('Location: ' . url('crew-edit.php?id=' . $postId));
+        exit;
+    }
+
     if ($action === 'save') {
         // ---- gather ------------------------------------------------
         $fullName       = trim($_POST['full_name']       ?? '');
@@ -462,6 +499,86 @@ endif;
     </form>
 </div>
 
-<?php /* All later modules now ship - no "Coming soon" placeholder. */ ?>
+<?php
+// -------------------------------------------------------------
+// Module 16 — Crew portal password (admin / sub_admin only,
+// existing crew records only). Lives in its own form so that
+// password changes are explicit and don't ride on top of a
+// personal-details edit.
+// -------------------------------------------------------------
+if ($isEditing && $canToggleAccess):
+    // Probe schema for the password column so this section degrades
+    // gracefully if CHANGES.sql hasn't been applied yet.
+    $hasPasswordCol = false;
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM crew LIKE 'password_hash'")->fetch();
+        $hasPasswordCol = (bool)$col;
+    } catch (PDOException $e) { /* ignore */ }
+
+    $passwordSetAt = null;
+    $lastLoginAt   = null;
+    if ($hasPasswordCol) {
+        $st = $pdo->prepare("SELECT password_hash, password_set_at, last_login_at FROM crew WHERE id = :i");
+        $st->execute([':i' => (int)$crew['id']]);
+        $info = $st->fetch();
+        $passwordSetAt = $info['password_set_at'] ?? null;
+        $lastLoginAt   = $info['last_login_at']   ?? null;
+        $hasPassword   = !empty($info['password_hash']);
+    } else {
+        $hasPassword = false;
+    }
+?>
+<div class="card">
+    <h3 class="card-title">Crew Portal Password</h3>
+    <?php if (!$hasPasswordCol): ?>
+        <div class="flash flash-warning">
+            <strong>Database migration pending.</strong>
+            Run <code>CHANGES.sql</code> on the production database to enable
+            crew portal passwords (adds <code>password_hash</code>, <code>password_set_at</code>,
+            <code>last_login_at</code> columns to the <code>crew</code> table).
+        </div>
+    <?php else: ?>
+        <p class="help-text">
+            Status:
+            <?php if ($hasPassword): ?>
+                <span class="status status-green">Password set</span>
+                <?php if ($passwordSetAt): ?> · set on <?= h($passwordSetAt) ?><?php endif; ?>
+                <?php if ($lastLoginAt):   ?> · last login <?= h($lastLoginAt) ?><?php endif; ?>
+            <?php else: ?>
+                <span class="status status-gray">No password yet</span>
+            <?php endif; ?>
+            <?php if ((int)$crew['crew_access_enabled'] !== 1): ?>
+                · <span class="status status-yellow">Access disabled</span> — turn on the toggle above before the crew can sign in.
+            <?php endif; ?>
+        </p>
+        <form method="post" action="<?= asset('crew-edit.php?id=' . (int)$crew['id']) ?>" novalidate>
+            <?= csrfField() ?>
+            <input type="hidden" name="action"  value="set_password">
+            <input type="hidden" name="crew_id" value="<?= (int)$crew['id'] ?>">
+            <div class="form-grid">
+                <div class="form-row">
+                    <label for="new_password">New password *</label>
+                    <input type="text" id="new_password" name="new_password" minlength="8" required autocomplete="new-password">
+                    <p class="help-text">At least 8 characters. Share this with the crew via a secure channel.</p>
+                </div>
+                <div class="form-row">
+                    <label for="confirm_password">Confirm *</label>
+                    <input type="text" id="confirm_password" name="confirm_password" minlength="8" required autocomplete="new-password">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn"><?= $hasPassword ? 'Reset password' : 'Set password' ?></button>
+                <?php if ($hasPassword): ?>
+                    <button type="submit" name="action" value="clear_password" formnovalidate
+                            class="btn btn-danger"
+                            data-confirm="Clear the password? The crew will not be able to sign in until a new password is set.">
+                        Clear password
+                    </button>
+                <?php endif; ?>
+            </div>
+        </form>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

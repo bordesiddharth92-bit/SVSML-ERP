@@ -599,6 +599,109 @@ function ageFromDOB(?string $dob): string
 /* ---------------- Module 9 (Travel) ---------------- */
 
 /**
+ * Date/time canonical format used to STORE travel departure / arrival
+ * timestamps in the (VARCHAR) columns. Sortable, unambiguous, and
+ * round-trips cleanly with HTML5 <input type="datetime-local"> values.
+ */
+const TRAVEL_DT_STORAGE_FORMAT = 'Y-m-d H:i';
+const TRAVEL_DT_DISPLAY_FORMAT = 'd/m/Y H:i';
+const TRAVEL_DT_INPUT_FORMAT   = 'Y-m-d\TH:i';
+
+/**
+ * Try to parse any of the formats we might encounter for a travel
+ * departure / arrival cell. Order matters — most specific first.
+ *
+ * Returns a DateTime on success, null on empty / unparseable input.
+ *
+ * Recognised inputs:
+ *   - "" / null                    → null
+ *   - "YYYY-MM-DDTHH:MM"           (HTML5 datetime-local — POST input)
+ *   - "YYYY-MM-DDTHH:MM:SS"        (some browsers add seconds)
+ *   - "YYYY-MM-DD HH:MM"           (canonical storage)
+ *   - "YYYY-MM-DD HH:MM:SS"        (legacy / DB datetime literal)
+ *   - "YYYY-MM-DD"                 (date-only — minute defaults to 00:00)
+ *   - "DD/MM/YYYY HH:MM"           (display format — re-edit round-trip)
+ *   - "DD/MM/YYYY"                 (legacy date-only display)
+ *
+ * Anything else (e.g. legacy free-text city names) returns null without
+ * raising — the caller decides whether to preserve the original string.
+ */
+function tryParseTravelDateTime(?string $value): ?DateTime
+{
+    if ($value === null) return null;
+    $v = trim($value);
+    if ($v === '') return null;
+
+    $candidates = [
+        TRAVEL_DT_INPUT_FORMAT,        // 2025-05-29T14:30
+        'Y-m-d\TH:i:s',                // 2025-05-29T14:30:00
+        TRAVEL_DT_STORAGE_FORMAT,      // 2025-05-29 14:30
+        'Y-m-d H:i:s',                 // 2025-05-29 14:30:00
+        'Y-m-d',                       // 2025-05-29
+        TRAVEL_DT_DISPLAY_FORMAT,      // 29/05/2025 14:30
+        'd/m/Y',                       // 29/05/2025
+    ];
+    foreach ($candidates as $fmt) {
+        $dt = DateTime::createFromFormat($fmt, $v);
+        if ($dt !== false) {
+            // createFromFormat for date-only formats leaves the current time
+            // in place — normalise to 00:00 so date-only inputs land on
+            // midnight rather than "now".
+            if ($fmt === 'Y-m-d' || $fmt === 'd/m/Y') {
+                $dt->setTime(0, 0, 0);
+            }
+            return $dt;
+        }
+    }
+    return null;
+}
+
+/**
+ * Convert a POSTed datetime-local input value into the canonical
+ * storage string ("YYYY-MM-DD HH:MM"). Returns null if the input is
+ * empty so callers can store NULL in the DB.
+ *
+ * If the input cannot be parsed (e.g. an operator typed free text),
+ * the trimmed original string is returned as-is so legacy / manual
+ * entries are preserved instead of silently lost.
+ */
+function parseTravelDateTimeForStorage(?string $value): ?string
+{
+    if ($value === null) return null;
+    $v = trim($value);
+    if ($v === '') return null;
+    $dt = tryParseTravelDateTime($v);
+    return $dt ? $dt->format(TRAVEL_DT_STORAGE_FORMAT) : $v;
+}
+
+/**
+ * Convert a stored value into the format expected by HTML5
+ * <input type="datetime-local">. Empty / unparseable input yields ''
+ * so the picker starts blank rather than fighting the operator over
+ * legacy free-text data.
+ */
+function formatTravelDateTimeForInput(?string $value): string
+{
+    $dt = tryParseTravelDateTime($value);
+    return $dt ? $dt->format(TRAVEL_DT_INPUT_FORMAT) : '';
+}
+
+/**
+ * Convert a stored value into the human display format
+ * "DD/MM/YYYY HH:MM". If the value isn't a recognised timestamp,
+ * the original trimmed string is returned so legacy free-text rows
+ * (entered before this picker shipped) still render meaningfully.
+ */
+function formatTravelDateTimeForDisplay(?string $value): string
+{
+    if ($value === null) return '';
+    $v = trim($value);
+    if ($v === '') return '';
+    $dt = tryParseTravelDateTime($v);
+    return $dt ? $dt->format(TRAVEL_DT_DISPLAY_FORMAT) : $v;
+}
+
+/**
  * Render a coloured pill for travel_details.final_status ENUM.
  * Null / empty values render as a gray placeholder so the operator can
  * distinguish "not set" from explicitly Pending.

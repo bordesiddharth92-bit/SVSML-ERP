@@ -131,8 +131,8 @@ include __DIR__ . '/includes/header.php';
                         <td><?= h($r['vessel_name'] ?? '—') ?></td>
                         <td><?= (int)$r['sr_number'] ?></td>
                         <td><?= h($r['detail_label']) ?></td>
-                        <td><?= h($r['departure'] ?? '—') ?></td>
-                        <td><?= h($r['arrival']   ?? '—') ?></td>
+                        <td><?= h(formatTravelDateTimeForDisplay($r['departure'] ?? '')) ?: '—' ?></td>
+                        <td><?= h(formatTravelDateTimeForDisplay($r['arrival']   ?? '')) ?: '—' ?></td>
                         <td>
                             <?php if ((int)$r['is_done']): ?>
                                 <span class="status status-green">Done</span>
