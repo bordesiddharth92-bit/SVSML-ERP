@@ -704,3 +704,13 @@ select.has-error:focus {
     outline: 2px solid #fecaca;
     outline-offset: 0;
 }
+
+
+
+/* =========================================================
+   Crew Portal admin — visual cue for "fully ready" rows
+   (master ON + access enabled + password set).
+   ========================================================= */
+.data-table tr.row-ready td {
+    background: #ecfdf5;
+}
