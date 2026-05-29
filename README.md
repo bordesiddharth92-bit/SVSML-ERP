@@ -116,8 +116,8 @@ Then visit `http://localhost:8080`. Make sure `config/db.php` points to a local 
 
 Modules are delivered one at a time. Currently delivered:
 
-- [x] **Module 1** — Schema + project skeleton (this PR)
-- [ ] Module 2 — Dropdowns / Settings
+- [x] **Module 1** — Schema + project skeleton
+- [x] **Module 2** — Dropdowns / Settings (this PR)
 - [ ] Module 3 — Companies & Vessels
 - [ ] Module 4 — Crew Personal Details
 - [ ] Module 5 — Documents + Courses + Medical
