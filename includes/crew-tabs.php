@@ -21,9 +21,9 @@ $tabs = [
     'medical'   => ['label' => 'Medical',           'href' => 'crew-medical.php?id='         . $crewId, 'available' => true],
     'courses'   => ['label' => 'Courses',           'href' => 'crew-courses.php?id='         . $crewId, 'available' => true],
     'sailing'   => ['label' => 'Sailing history',   'href' => 'crew-sailing-history.php?id=' . $crewId, 'available' => true],
-    'signon'    => ['label' => 'Sign on/off',       'href' => null, 'tooltip' => 'Coming in Module 7'],
-    'contract'  => ['label' => 'Contract',          'href' => null, 'tooltip' => 'Coming in Module 8'],
-    'travel'    => ['label' => 'Travel',            'href' => null, 'tooltip' => 'Coming in Module 9'],
+    'signon'    => ['label' => 'Sign on/off',        'href' => 'crew-signon.php?id='          . $crewId, 'available' => true],
+    'contract'  => ['label' => 'Contract',           'href' => 'crew-contracts.php?id='       . $crewId, 'available' => true],
+    'travel'    => ['label' => 'Travel',             'href' => 'crew-travel.php?id='          . $crewId, 'available' => true],
 ];
 
 $currentTab = $currentTab ?? 'personal';

@@ -600,14 +600,19 @@ function ageFromDOB(?string $dob): string
 
 /**
  * Render a coloured pill for travel_details.final_status ENUM.
+ * Null / empty values render as a gray placeholder so the operator can
+ * distinguish "not set" from explicitly Pending.
  */
 function travelStatusBadge(?string $status): string
 {
+    if ($status === null || $status === '') {
+        return '<span class="status status-gray">—</span>';
+    }
     $map = [
         'valid'   => ['class' => 'green',  'label' => 'Valid'],
         'pending' => ['class' => 'yellow', 'label' => 'Pending'],
         'invalid' => ['class' => 'red',    'label' => 'Invalid'],
     ];
-    $row = $map[$status ?? 'pending'] ?? ['class' => 'gray', 'label' => '—'];
+    $row = $map[$status] ?? ['class' => 'gray', 'label' => '—'];
     return '<span class="status status-' . h($row['class']) . '">' . h($row['label']) . '</span>';
 }
