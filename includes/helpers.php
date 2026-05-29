@@ -345,3 +345,141 @@ function paginate(int $page, int $totalPages, string $baseUrl): string
     $out .= '</nav>';
     return $out;
 }
+
+
+
+/* ---------------- Size dropdown helpers ---------------- */
+
+/** Clothing sizes used for boiler suit / shirt. */
+function clothingSizeOptions(): array
+{
+    return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+}
+
+/** Numeric sizes used for safety shoes / pants. */
+function numericSizeOptions(): array
+{
+    return ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46'];
+}
+
+/**
+ * Render an HTML <select> backed by a fixed list of size strings.
+ * Preserves legacy values that aren't in the preset list by appending
+ * them as an extra option, so editing an old crew record never loses data.
+ */
+function renderSizeSelect(string $name, array $options, ?string $selected, string $id = ''): string
+{
+    $id = $id !== '' ? $id : $name;
+    $html = '<select name="' . h($name) . '" id="' . h($id) . '">';
+    $html .= '<option value="">— Select —</option>';
+    $found = false;
+    foreach ($options as $opt) {
+        $sel = ((string)$selected === (string)$opt) ? ' selected' : '';
+        if ($sel) $found = true;
+        $html .= '<option value="' . h($opt) . '"' . $sel . '>' . h($opt) . '</option>';
+    }
+    if (!$found && $selected !== null && $selected !== '') {
+        // Preserve any legacy value typed before this dropdown existed.
+        $html .= '<option value="' . h($selected) . '" selected>' . h($selected) . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+}
+
+/* ---------------- Crew helpers ---------------- */
+
+/**
+ * Fetch a crew row joined with its rank / company / vessel labels.
+ * Returns the row array or null if not found.
+ */
+function fetchCrewWithJoins(PDO $pdo, int $crewId): ?array
+{
+    $stmt = $pdo->prepare(
+        "SELECT cr.*,
+                r.rank_name,
+                c.company_name,
+                v.vessel_name
+           FROM crew cr
+           LEFT JOIN ranks     r ON r.id = cr.rank_id
+           LEFT JOIN companies c ON c.id = cr.company_id
+           LEFT JOIN vessels   v ON v.id = cr.vessel_id
+          WHERE cr.id = :i
+          LIMIT 1"
+    );
+    $stmt->execute([':i' => $crewId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+/* ---------------- Default course seeding ---------------- */
+
+/** Default basic course names seeded for every new crew. */
+function defaultBasicCourseNames(): array
+{
+    return ['BST', 'PST', 'PSSR', 'FPFF', 'EFA', 'STSDSD', 'Security Awareness'];
+}
+
+/** Default advanced course names seeded for every new crew. */
+function defaultAdvancedCourseNames(): array
+{
+    return ['AFF', 'MFA', 'PSCRB', 'BRM/ERM', 'RADAR/ARPA', 'ECDIS',
+            'Tanker Advanced', 'BOSIET/OGUK', 'Food Handling', 'H2S'];
+}
+
+/**
+ * Seed the standard set of basic + advanced courses for a crew, but only
+ * if the crew has no rows in the corresponding table yet (idempotent).
+ *
+ * Called from crew-edit.php on INSERT, and as a lazy-seed safety net
+ * from crew-courses.php on first view (handles crew records that were
+ * created before Module 5 was deployed).
+ */
+function seedDefaultCoursesForCrew(PDO $pdo, int $crewId, ?int $userId): void
+{
+    $basicCount = (int)$pdo->query(
+        "SELECT COUNT(*) FROM basic_courses WHERE crew_id = " . $crewId
+    )->fetchColumn();
+    if ($basicCount === 0) {
+        $stmt = $pdo->prepare(
+            "INSERT INTO basic_courses (crew_id, course_name, created_by, created_at)
+             VALUES (:c, :n, :u, NOW())"
+        );
+        foreach (defaultBasicCourseNames() as $n) {
+            $stmt->execute([':c' => $crewId, ':n' => $n, ':u' => $userId]);
+        }
+    }
+
+    $advCount = (int)$pdo->query(
+        "SELECT COUNT(*) FROM advanced_courses WHERE crew_id = " . $crewId
+    )->fetchColumn();
+    if ($advCount === 0) {
+        $stmt = $pdo->prepare(
+            "INSERT INTO advanced_courses (crew_id, course_name, created_by, created_at)
+             VALUES (:c, :n, :u, NOW())"
+        );
+        foreach (defaultAdvancedCourseNames() as $n) {
+            $stmt->execute([':c' => $crewId, ':n' => $n, ':u' => $userId]);
+        }
+    }
+}
+
+/* ---------------- Misc rendering helpers ---------------- */
+
+/** Render a small status badge for a date (issue/expiry). */
+function dateStatusBadge(?string $expiry): string
+{
+    $s = dateStatus($expiry);
+    return '<span class="status status-' . h($s['class']) . '" title="'
+         . h($expiry ?? '—') . '">' . h($s['label']) . '</span>';
+}
+
+/** Compute days between two YYYY-MM-DD dates inclusive. Returns null if either is empty/invalid. */
+function daysBetween(?string $from, ?string $to): ?int
+{
+    if (empty($from) || empty($to)) return null;
+    $d1 = DateTime::createFromFormat('Y-m-d', $from);
+    $d2 = DateTime::createFromFormat('Y-m-d', $to);
+    if (!$d1 || !$d2) return null;
+    $diff = (int)$d1->diff($d2)->format('%r%a');
+    return abs($diff) + 1;
+}
