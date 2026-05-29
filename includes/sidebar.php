@@ -26,7 +26,13 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
     // Group edit pages with their list page for highlighting purposes.
     static $editGroups = [
         'vessels.php' => ['vessel-edit.php'],
-        'crew.php'    => ['crew-edit.php'],
+        'crew.php'    => [
+            'crew-edit.php',
+            'crew-documents.php',
+            'crew-medical.php',
+            'crew-courses.php',
+            'crew-sailing-history.php',
+        ],
     ];
     $isActive = ($hrefBase === $current)
         || (isset($editGroups[$hrefBase]) && in_array($current, $editGroups[$hrefBase], true));

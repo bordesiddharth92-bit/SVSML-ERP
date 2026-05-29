@@ -118,10 +118,10 @@ Modules are delivered one at a time. Currently delivered:
 
 - [x] **Module 1** — Schema + project skeleton
 - [x] **Module 2** — Dropdowns / Settings
-- [x] **Module 3** — Companies & Vessels (this PR)
-- [x] **Module 4** — Crew Personal Details (this PR)
-- [ ] Module 5 — Documents + Courses + Medical
-- [ ] Module 6 — Sailing History
+- [x] **Module 3** — Companies & Vessels
+- [x] **Module 4** — Crew Personal Details
+- [x] **Module 5** — Documents + Courses + Medical (this PR)
+- [x] **Module 6** — Sailing History (this PR)
 - [ ] Module 7 — Sign On / Sign Off
 - [ ] Module 8 — Contracts (dompdf)
 - [ ] Module 9 — Travel Details
