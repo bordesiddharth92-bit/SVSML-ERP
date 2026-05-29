@@ -89,7 +89,8 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
         <?php endif; ?>
 
         <?php if (in_array($role, ['admin', 'sub_admin'], true)): ?>
-            <?= nav_link('settings.php', 'System Settings', $current) ?>
+            <?= nav_link('crew-portal-admin.php', 'Crew Portal Admin', $current) ?>
+            <?= nav_link('settings.php',          'System Settings',   $current) ?>
         <?php endif; ?>
 
         <?php if ($role === 'crew'): ?>
