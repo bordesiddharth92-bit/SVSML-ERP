@@ -42,4 +42,38 @@
         }
     });
     document.addEventListener('DOMContentLoaded', syncSourceStaffField);
+
+    // ---- Module 9: travel sheet — colour the status select based on its
+    // current value so the sheet reads at a glance. The CSS uses
+    // .travel-status-{valid|pending|invalid} classes on the parent <td>.
+    function paintTravelStatus(select) {
+        var td = select.closest('td');
+        if (!td) return;
+        td.classList.remove(
+            'travel-status-valid', 'travel-status-pending', 'travel-status-invalid'
+        );
+        td.classList.add('travel-status-' + (select.value || 'pending'));
+    }
+    function paintAllTravelStatuses() {
+        document.querySelectorAll('select.travel-status-select').forEach(paintTravelStatus);
+    }
+    document.addEventListener('change', function (ev) {
+        if (ev.target.matches('select.travel-status-select')) paintTravelStatus(ev.target);
+    });
+    document.addEventListener('DOMContentLoaded', paintAllTravelStatuses);
+
+    // ---- Module 9: warn before "Clear" wipes unsaved row edits.
+    // Reset is naturally form-scoped so this only fires for the travel form.
+    document.addEventListener('reset', function (ev) {
+        var form = ev.target;
+        if (!form || form.id !== 'travel-form') return;
+        if (!window.confirm(
+            'Discard unsaved changes in the travel sheet and revert to last-saved values?'
+        )) {
+            ev.preventDefault();
+        } else {
+            // After the native reset settles, repaint the status colour cells.
+            setTimeout(paintAllTravelStatuses, 0);
+        }
+    });
 })();

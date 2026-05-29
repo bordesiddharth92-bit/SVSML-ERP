@@ -8,7 +8,12 @@
  *   dateStatus()   green/yellow/red/gray classification
  *   uploadFile()   safe file upload with allow-list
  *   getSetting()   read system_settings / alert_settings
+ *
+ * Auto-loads Module 9 (Travel) reference data so any page using the
+ * travel helpers below has the airport / country / row-type tables
+ * available without an extra require.
  */
+require_once __DIR__ . '/travel-data.php';
 
 /** Short HTML-escape helper for output. */
 function h($s): string
@@ -702,6 +707,137 @@ function formatTravelDateTimeForDisplay(?string $value): string
 }
 
 /**
+ * Decode a stored travel field (departure / arrival) into a key/value array.
+ *
+ * Storage rules (Module 9 redesign):
+ *   - Structured rows store a JSON object, e.g.
+ *       {"airport":"DEL - DELHI","date":"2025-05-29","time":"14:30"}
+ *   - Single-field rows store a JSON object with one key
+ *       {"country":"United States"}     {"visa_type":"WORK"}
+ *       {"ynp":"YES","detail":"OKTB issued"}
+ *   - Custom rows store a plain string.
+ *   - Legacy rows from the previous build may contain "YYYY-MM-DD HH:MM"
+ *     or arbitrary free text. They are returned as ['raw' => $value]
+ *     so callers can fall back gracefully.
+ *
+ * Always returns an array — empty when the field is unset / blank.
+ */
+function travelFieldDecode(?string $value): array
+{
+    if ($value === null) return [];
+    $v = trim($value);
+    if ($v === '') return [];
+
+    if ($v[0] === '{') {
+        $decoded = json_decode($v, true);
+        if (is_array($decoded)) return $decoded;
+    }
+    return ['raw' => $v];
+}
+
+/**
+ * Decode a stored field with awareness of its row type. For flight rows
+ * we additionally try to interpret a legacy "YYYY-MM-DD HH:MM" value
+ * (written by the previous Module 9 build) as a date+time pair so the
+ * user doesn't lose old data when they edit.
+ */
+function travelFieldDecodeForType(?string $value, string $rowType): array
+{
+    $parts = travelFieldDecode($value);
+    if (in_array($rowType, ['flight_domestic', 'flight_international'], true)) {
+        if (!empty($parts['raw']) && empty($parts['date']) && empty($parts['time'])) {
+            $dt = tryParseTravelDateTime($parts['raw']);
+            if ($dt) {
+                return [
+                    'airport' => '',
+                    'date'    => $dt->format('Y-m-d'),
+                    'time'    => $dt->format('H:i'),
+                ];
+            }
+        }
+    }
+    return $parts;
+}
+
+/**
+ * Encode a key/value array into the canonical storage form.
+ *
+ * - Empty / all-blank input  → null  (caller stores DB NULL)
+ * - Single 'raw' key         → that string verbatim  (custom rows)
+ * - Anything else            → JSON  (structured rows)
+ *
+ * Empty string values are stripped so we don't keep noisy keys like
+ * {"airport":"","date":"","time":""} in the DB.
+ */
+function travelFieldEncode(array $parts): ?string
+{
+    $clean = [];
+    foreach ($parts as $k => $v) {
+        if ($v === null) continue;
+        $vs = is_string($v) ? trim($v) : $v;
+        if ($vs === '' || $vs === null) continue;
+        $clean[$k] = $vs;
+    }
+    if (empty($clean)) return null;
+    if (count($clean) === 1 && array_key_exists('raw', $clean)) return $clean['raw'];
+    return json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+/**
+ * Render a stored travel field (departure / arrival) for read-only display.
+ *
+ * Knows how to format every row type used by Module 9:
+ *   - flight_domestic / flight_international:  "AIRPORT — DD/MM/YYYY HH:MM"
+ *   - airport_intl                          :  "AIRPORT"
+ *   - visa_country                          :  country name
+ *   - visa_type                             :  visa type
+ *   - oktb / lg                             :  status (+ detail in parens)
+ *   - custom (or legacy)                    :  raw / formatted datetime
+ *
+ * Empty fields render as the em dash '—'.
+ */
+function travelFieldDisplay(?string $value, string $rowType): string
+{
+    $p = travelFieldDecodeForType($value, $rowType);
+    if (empty($p)) return '—';
+
+    switch ($rowType) {
+        case 'flight_domestic':
+        case 'flight_international':
+            $bits = [];
+            if (!empty($p['airport'])) $bits[] = $p['airport'];
+            if (!empty($p['date']) || !empty($p['time'])) {
+                $dt = ($p['date'] ?? '') . ' ' . ($p['time'] ?? '');
+                $disp = formatTravelDateTimeForDisplay(trim($dt));
+                if ($disp !== '') $bits[] = $disp;
+            }
+            return $bits ? implode(' — ', $bits) : '—';
+
+        case 'airport_intl':
+            return $p['airport'] ?? ($p['raw'] ?? '—');
+
+        case 'visa_country':
+            return $p['country'] ?? ($p['raw'] ?? '—');
+
+        case 'visa_type':
+            return $p['visa_type'] ?? ($p['raw'] ?? '—');
+
+        case 'oktb':
+        case 'lg':
+            $s = $p['ynp'] ?? ($p['raw'] ?? '');
+            $d = $p['detail'] ?? '';
+            if ($s === '' && $d === '') return '—';
+            return $d !== '' ? trim($s . ' — ' . $d, ' —') : $s;
+
+        case 'custom':
+        default:
+            // Legacy stored datetime → display as DD/MM/YYYY HH:MM.
+            if (!empty($p['raw'])) return formatTravelDateTimeForDisplay($p['raw']);
+            return '—';
+    }
+}
+
+/**
  * Render a coloured pill for travel_details.final_status ENUM.
  * Null / empty values render as a gray placeholder so the operator can
  * distinguish "not set" from explicitly Pending.
@@ -718,4 +854,55 @@ function travelStatusBadge(?string $status): string
     ];
     $row = $map[$status] ?? ['class' => 'gray', 'label' => '—'];
     return '<span class="status status-' . h($row['class']) . '">' . h($row['label']) . '</span>';
+}
+
+
+
+/* =========================================================
+   Module 16 — Crew Portal helpers
+   ========================================================= */
+
+/**
+ * Fetch the crew's most recent contract (latest by id). The contract
+ * is where we currently capture photo, place_of_birth, home_town,
+ * next-of-kin, and beneficiary — so the portal pulls those from here
+ * rather than duplicating them on the crew table.
+ *
+ * Returns null when the crew has no contracts yet.
+ */
+function fetchLatestContractForCrew(PDO $pdo, int $crewId): ?array
+{
+    $stmt = $pdo->prepare(
+        "SELECT * FROM contracts WHERE crew_id = :c ORDER BY id DESC LIMIT 1"
+    );
+    $stmt->execute([':c' => $crewId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+/**
+ * Best-effort URL for the crew's profile photo. The contracts table is
+ * the canonical source. Returns '' when no photo is on file so callers
+ * can fall back to initials / placeholder.
+ */
+function crewPhotoUrl(?array $latestContract): string
+{
+    if (!$latestContract || empty($latestContract['photo_path'])) return '';
+    return asset('uploads/' . $latestContract['photo_path']);
+}
+
+/**
+ * Return the two-letter initials for a crew name, used when no photo
+ * is available. e.g. "RAVI KUMAR" → "RK", "PRIYA" → "PR".
+ */
+function crewInitials(string $fullName): string
+{
+    $parts = preg_split('/\s+/u', trim($fullName));
+    if (!$parts) return '?';
+    if (count($parts) === 1) {
+        return mb_strtoupper(mb_substr($parts[0], 0, 2, 'UTF-8'));
+    }
+    $a = mb_substr($parts[0], 0, 1, 'UTF-8');
+    $b = mb_substr(end($parts), 0, 1, 'UTF-8');
+    return mb_strtoupper($a . $b);
 }

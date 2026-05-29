@@ -46,7 +46,7 @@ $offset     = ($page - 1) * $perPage;
 
 $rows = $pdo->prepare(
     "SELECT t.id, t.sr_number, t.detail_label, t.departure, t.arrival,
-            t.is_done, t.final_status,
+            t.is_done, t.final_status, t.field_type,
             cr.id        AS crew_id,
             cr.full_name AS crew_name,
             v.vessel_name
@@ -121,7 +121,9 @@ include __DIR__ . '/includes/header.php';
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($rows as $r): ?>
+                <?php foreach ($rows as $r):
+                    $rt = travelRowType($r['detail_label'], $r['field_type'] ?? 'default');
+                ?>
                     <tr>
                         <td>
                             <a href="<?= asset('crew-travel.php?id=' . (int)$r['crew_id']) ?>">
@@ -131,8 +133,8 @@ include __DIR__ . '/includes/header.php';
                         <td><?= h($r['vessel_name'] ?? '—') ?></td>
                         <td><?= (int)$r['sr_number'] ?></td>
                         <td><?= h($r['detail_label']) ?></td>
-                        <td><?= h(formatTravelDateTimeForDisplay($r['departure'] ?? '')) ?: '—' ?></td>
-                        <td><?= h(formatTravelDateTimeForDisplay($r['arrival']   ?? '')) ?: '—' ?></td>
+                        <td><?= h(travelFieldDisplay($r['departure'] ?? '', $rt)) ?></td>
+                        <td><?= h(travelFieldDisplay($r['arrival']   ?? '', $rt)) ?></td>
                         <td>
                             <?php if ((int)$r['is_done']): ?>
                                 <span class="status status-green">Done</span>
