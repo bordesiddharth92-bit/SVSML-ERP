@@ -192,6 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo, $user['id'], 'create', 'crew', $newId,
                     "Added crew '{$fullName}'"
                 );
+                // Seed the default basic + advanced courses (Module 5).
+                seedDefaultCoursesForCrew($pdo, $newId, $user['id']);
                 flash('success', "Added '{$fullName}'.");
                 header('Location: ' . url('crew-edit.php?id=' . $newId));
             }
@@ -253,16 +255,31 @@ $staffUsers = $pdo->query(
       ORDER BY full_name"
 )->fetchAll();
 
-$pageTitle = $isEditing ? ('Edit crew — ' . $crew['full_name']) : 'Add crew';
+$pageTitle  = $isEditing ? ('Edit crew — ' . $crew['full_name']) : 'Add crew';
+$currentTab = 'personal';
 include __DIR__ . '/includes/header.php';
+?>
+
+<?php
+// Show the crew sub-nav (Personal / Documents / Medical / Courses / Sailing)
+// when editing — it needs the joined rank/company/vessel labels.
+if ($isEditing):
+    $crewWithJoins = fetchCrewWithJoins($pdo, (int)$crew['id']);
+    if ($crewWithJoins):
+        $crew = array_merge($crew, $crewWithJoins);
+        include __DIR__ . '/includes/crew-tabs.php';
+    endif;
+endif;
 ?>
 
 <div class="card">
     <div class="toolbar">
         <h2 class="card-title" style="margin:0">
-            <?= $isEditing ? 'Edit crew member' : 'Add new crew member' ?>
+            <?= $isEditing ? 'Personal details' : 'Add new crew member' ?>
         </h2>
-        <a class="btn btn-ghost" href="<?= asset('crew.php') ?>">← Back to crew list</a>
+        <?php if (!$isEditing): ?>
+            <a class="btn btn-ghost" href="<?= asset('crew.php') ?>">← Back to crew list</a>
+        <?php endif; ?>
     </div>
 
     <form method="post" novalidate>
@@ -401,27 +418,19 @@ include __DIR__ . '/includes/header.php';
         <div class="form-grid">
             <div class="form-row">
                 <label for="boiler_suit_size">Boiler suit</label>
-                <input type="text" id="boiler_suit_size" name="boiler_suit_size"
-                       value="<?= h($crew['boiler_suit_size']) ?>" maxlength="10"
-                       placeholder="e.g. M, L, XL">
+                <?= renderSizeSelect('boiler_suit_size', clothingSizeOptions(), $crew['boiler_suit_size']) ?>
             </div>
             <div class="form-row">
                 <label for="safety_shoes_size">Safety shoes</label>
-                <input type="text" id="safety_shoes_size" name="safety_shoes_size"
-                       value="<?= h($crew['safety_shoes_size']) ?>" maxlength="10"
-                       placeholder="e.g. 42, 9">
+                <?= renderSizeSelect('safety_shoes_size', numericSizeOptions(), $crew['safety_shoes_size']) ?>
             </div>
             <div class="form-row">
                 <label for="shirt_size">Shirt</label>
-                <input type="text" id="shirt_size" name="shirt_size"
-                       value="<?= h($crew['shirt_size']) ?>" maxlength="10"
-                       placeholder="e.g. M, L, XL">
+                <?= renderSizeSelect('shirt_size', clothingSizeOptions(), $crew['shirt_size']) ?>
             </div>
             <div class="form-row">
                 <label for="pant_size">Pant</label>
-                <input type="text" id="pant_size" name="pant_size"
-                       value="<?= h($crew['pant_size']) ?>" maxlength="10"
-                       placeholder="e.g. 32, 34">
+                <?= renderSizeSelect('pant_size', numericSizeOptions(), $crew['pant_size']) ?>
             </div>
         </div>
 
@@ -453,15 +462,6 @@ include __DIR__ . '/includes/header.php';
     </form>
 </div>
 
-<?php if ($isEditing): ?>
-    <div class="card">
-        <h3 class="card-title">Coming soon</h3>
-        <p class="help-text">
-            Documents (CV / passport / CDC / visas / SID), medical certificates,
-            STCW courses, sign-on / off, contracts and travel land in
-            Modules 5 – 9. They will appear here once those modules ship.
-        </p>
-    </div>
-<?php endif; ?>
+<?php /* All later modules now ship - no "Coming soon" placeholder. */ ?>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

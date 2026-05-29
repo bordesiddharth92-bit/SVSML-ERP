@@ -139,16 +139,30 @@ a:hover { text-decoration: underline; }
 .form-row input[type=password],
 .form-row input[type=date],
 .form-row input[type=number],
-.form-row select,
-.form-row textarea {
+.form-row input[type=search],
+.form-row select {
     width: 100%;
-    padding: 8px 10px;
+    height: 36px;
+    padding: 4px 10px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 14px;
+    line-height: 1.4;
     font-family: inherit;
+    background: #fff;
+    box-sizing: border-box;
 }
-.form-row textarea { min-height: 80px; }
+.form-row textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 1.4;
+    font-family: inherit;
+    min-height: 80px;
+    box-sizing: border-box;
+}
 .form-actions { display: flex; gap: 10px; margin-top: 14px; }
 .help-text { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
