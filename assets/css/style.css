@@ -448,3 +448,137 @@ table.data-table {
     margin-right: 8px;
 }
 .action-link.danger { color: var(--red); }
+
+
+
+/* =========================================================
+   Module 9 — Travel sheet editor
+   Type-aware row layout used by crew-travel.php
+   ========================================================= */
+
+.travel-toolbar {
+    align-items: center;
+}
+.travel-toolbar-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.travel-table-wrap {
+    overflow-x: auto;             /* let the sheet scroll on small screens */
+}
+
+.travel-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 1200px;            /* keep all eight columns readable */
+}
+.travel-table th,
+.travel-table td {
+    vertical-align: top;
+    padding: 8px;
+}
+.travel-table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+.travel-table .th-sr      { width: 56px;  text-align: center; }
+.travel-table .th-details { width: 14%; }
+.travel-table .th-side    { width: 19%; }
+.travel-table .th-done    { width: 70px;  text-align: center; }
+.travel-table .th-status  { width: 110px; }
+.travel-table .th-remarks { width: 16%; }
+.travel-table .th-action  { width: 80px;  text-align: right; }
+
+.travel-table .td-sr      { text-align: center; padding-top: 14px; }
+.travel-table .td-done    { text-align: center; padding-top: 14px; }
+.travel-table .td-action  { text-align: right;  padding-top: 14px; }
+
+/* Inputs inside the sheet should fill their cell. */
+.travel-table input[type="text"],
+.travel-table input[type="date"],
+.travel-table input[type="time"],
+.travel-table select,
+.travel-table textarea {
+    width: 100%;
+    font-size: 13px;
+    padding: 6px 8px;
+}
+.travel-table textarea {
+    resize: vertical;
+    min-height: 44px;
+}
+
+.travel-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.3;
+}
+
+.travel-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.travel-sub {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.travel-sub > label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin: 0;
+    font-weight: 500;
+}
+.travel-sub-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.travel-check {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.travel-check input { transform: scale(1.2); }
+
+/* Status select grows a coloured outline so the operator can scan
+   final-status at a glance, just like the badges elsewhere. */
+.travel-status-select { font-weight: 600; }
+.travel-status-valid select.travel-status-select   { color: var(--green);   border-color: #bbf7d0; }
+.travel-status-pending select.travel-status-select { color: var(--yellow);  border-color: #fde68a; }
+.travel-status-invalid select.travel-status-select { color: var(--red);     border-color: #fecaca; }
+
+.muted { color: var(--text-muted); }
+
+/* Quick-add button row spacing (overrides default tight stacking). */
+.travel-quickadd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Tighten things up on narrow screens — the sheet still scrolls
+   horizontally, but the buttons wrap and the secondary toolbar drops
+   under the heading. */
+@media (max-width: 900px) {
+    .travel-toolbar { flex-direction: column; align-items: stretch; }
+    .travel-toolbar-actions { justify-content: flex-start; }
+}

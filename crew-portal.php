@@ -396,12 +396,14 @@ include __DIR__ . '/includes/header.php';
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($travel as $t): ?>
+                <?php foreach ($travel as $t):
+                    $rt = travelRowType($t['detail_label'], $t['field_type'] ?? 'default');
+                ?>
                     <tr>
                         <td><?= (int)$t['sr_number'] ?></td>
                         <td><?= h($t['detail_label']) ?></td>
-                        <td><?= h(formatTravelDateTimeForDisplay($t['departure'] ?? '')) ?: '—' ?></td>
-                        <td><?= h(formatTravelDateTimeForDisplay($t['arrival']   ?? '')) ?: '—' ?></td>
+                        <td><?= h(travelFieldDisplay($t['departure'] ?? '', $rt)) ?></td>
+                        <td><?= h(travelFieldDisplay($t['arrival']   ?? '', $rt)) ?></td>
                         <td>
                             <?= ((int)$t['is_done']) ? '<span class="status status-green">Done</span>' : '<span class="status status-gray">Open</span>' ?>
                         </td>
