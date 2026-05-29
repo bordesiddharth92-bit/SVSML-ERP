@@ -11,9 +11,12 @@
  *
  * Auto-loads Module 9 (Travel) reference data so any page using the
  * travel helpers below has the airport / country / row-type tables
- * available without an extra require.
+ * available without an extra require. Also pulls in the field
+ * validators (passport / mobile / email / CDC / INDOS) used by every
+ * form that captures crew identity data.
  */
 require_once __DIR__ . '/travel-data.php';
+require_once __DIR__ . '/validators.php';
 
 /** Short HTML-escape helper for output. */
 function h($s): string

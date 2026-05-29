@@ -80,11 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save') {
         // ---- gather ------------------------------------------------
         $fullName       = trim($_POST['full_name']       ?? '');
-        $indosNumber    = trim($_POST['indos_number']    ?? '');
-        $passportNumber = trim($_POST['passport_number'] ?? '');
+        $indosNumber    = normalizeUpperTrim($_POST['indos_number']    ?? '');
+        $passportNumber = normalizeUpperTrim($_POST['passport_number'] ?? '');
         $dob            = trim($_POST['date_of_birth']   ?? '');
-        $contactNumber  = trim($_POST['contact_number']  ?? '');
-        $email          = trim($_POST['email']           ?? '');
+        $contactNumber  = normalizeMobileValue($_POST['contact_number']  ?? '');
+        $email          = normalizeEmailValue($_POST['email']           ?? '');
         $fullAddress    = trim($_POST['full_address']    ?? '');
 
         $rankId         = isset($_POST['rank_id'])    && $_POST['rank_id']    !== '' ? (int)$_POST['rank_id']    : null;
@@ -107,28 +107,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors = [];
         if ($fullName === '')                                  $errors[] = 'Full name is required.';
         if (mb_strlen($fullName) > 100)                        $errors[] = 'Full name too long (max 100 chars).';
-        if ($indosNumber !== '' && mb_strlen($indosNumber) > 50)       $errors[] = 'INDOS number too long (max 50 chars).';
-        if ($passportNumber !== '' && mb_strlen($passportNumber) > 50) $errors[] = 'Passport number too long (max 50 chars).';
+        if (mb_strlen($indosNumber) > 50)                      $errors[] = 'INDOS number too long (max 50 chars).';
+        if (mb_strlen($passportNumber) > 50)                   $errors[] = 'Passport number too long (max 50 chars).';
         if ($dob !== '' && DateTime::createFromFormat('Y-m-d', $dob) === false) $errors[] = 'Invalid date of birth.';
-        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL))        $errors[] = 'Invalid email address.';
+
+        // Format validation per the validation spec (passport / mobile /
+        // email / INDOS). All five are optional at the schema level — we
+        // only enforce shape when the operator typed something.
+        if (($e = validatePassportField($passportNumber)) !== null) $errors[] = $e;
+        if (($e = validateMobileField($contactNumber))    !== null) $errors[] = $e;
+        if (($e = validateEmailField($email))             !== null) $errors[] = $e;
+        if (($e = validateINDOSField($indosNumber))       !== null) $errors[] = $e;
 
         // INDOS uniqueness (if provided).
-        if (empty($errors) && $indosNumber !== '') {
-            $sql = "SELECT id FROM crew WHERE indos_number = :v" . ($postId > 0 ? " AND id <> :i" : "") . " LIMIT 1";
-            $stmt = $pdo->prepare($sql);
-            $bind = [':v' => $indosNumber];
-            if ($postId > 0) $bind[':i'] = $postId;
-            $stmt->execute($bind);
-            if ($stmt->fetch()) $errors[] = "INDOS '{$indosNumber}' is already used by another crew member.";
+        if (empty($errors) && $indosNumber !== '' && !isINDOSUnique($pdo, $indosNumber, $postId > 0 ? $postId : null)) {
+            $errors[] = "INDOS '{$indosNumber}' is already used by another crew member.";
         }
         // Passport uniqueness (if provided).
-        if (empty($errors) && $passportNumber !== '') {
-            $sql = "SELECT id FROM crew WHERE passport_number = :v" . ($postId > 0 ? " AND id <> :i" : "") . " LIMIT 1";
-            $stmt = $pdo->prepare($sql);
-            $bind = [':v' => $passportNumber];
-            if ($postId > 0) $bind[':i'] = $postId;
-            $stmt->execute($bind);
-            if ($stmt->fetch()) $errors[] = "Passport '{$passportNumber}' is already used by another crew member.";
+        if (empty($errors) && $passportNumber !== '' && !isPassportUnique($pdo, $passportNumber, $postId > 0 ? $postId : null)) {
+            $errors[] = "Passport '{$passportNumber}' is already used by another crew member.";
         }
 
         if (!empty($errors)) {
@@ -334,15 +331,21 @@ endif;
             <div class="form-row">
                 <label for="passport_number">Passport number</label>
                 <input type="text" id="passport_number" name="passport_number"
+                       data-validate="passport"
                        value="<?= h($crew['passport_number']) ?>" maxlength="50">
                 <p class="help-text">
                     Used as the crew login username from Module 16 onward.
+                    Format: 3–20 uppercase letters / digits, no spaces or symbols.
                 </p>
             </div>
             <div class="form-row">
                 <label for="indos_number">INDOS number</label>
                 <input type="text" id="indos_number" name="indos_number"
+                       data-validate="indos"
                        value="<?= h($crew['indos_number']) ?>" maxlength="50">
+                <p class="help-text">
+                    Mandatory for Indian crew. Format: 2 digits + 2 uppercase letters + 4 digits (e.g. <code>12HL3456</code>).
+                </p>
             </div>
             <div class="form-row">
                 <label for="date_of_birth">Date of birth</label>
@@ -356,11 +359,18 @@ endif;
             <div class="form-row">
                 <label for="contact_number">Contact number</label>
                 <input type="text" id="contact_number" name="contact_number"
-                       value="<?= h($crew['contact_number']) ?>" maxlength="20">
+                       data-validate="mobile"
+                       value="<?= h($crew['contact_number']) ?>" maxlength="20"
+                       placeholder="+919876543210">
+                <p class="help-text">
+                    International format with country code (E.164), e.g. <code>+919876543210</code>.
+                    Spaces, dashes and brackets are removed automatically.
+                </p>
             </div>
             <div class="form-row">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email"
+                       data-validate="email"
                        value="<?= h($crew['email']) ?>" maxlength="100">
             </div>
             <div class="form-row full-row">
