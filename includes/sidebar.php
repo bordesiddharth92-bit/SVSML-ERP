@@ -93,7 +93,19 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
         <?php endif; ?>
 
         <?php if ($role === 'crew'): ?>
-            <?= nav_link('crew-portal.php', 'My Profile', $current) ?>
+            <div class="nav-section">My Profile</div>
+            <?= nav_link('crew-portal.php',           'Overview',  $current) ?>
+            <?= nav_link('crew-portal-personal.php',  'Personal',  $current) ?>
+            <?= nav_link('crew-portal-documents.php', 'Documents', $current) ?>
+            <?= nav_link('crew-portal-medical.php',   'Medical',   $current) ?>
+            <?= nav_link('crew-portal-courses.php',   'Courses',   $current) ?>
+            <?= nav_link('crew-portal-sailing.php',   'Sailing',   $current) ?>
+            <?= nav_link('crew-portal-contracts.php', 'Contracts', $current) ?>
+            <?= nav_link('crew-portal-travel.php',    'Travel',    $current) ?>
+            <?= nav_link('crew-portal-approvals.php', 'Approvals', $current) ?>
+
+            <div class="nav-section">Account</div>
+            <?= nav_link('crew-portal-password.php',  'Change password', $current) ?>
         <?php endif; ?>
     </nav>
 </aside>

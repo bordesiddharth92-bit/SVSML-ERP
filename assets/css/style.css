@@ -582,3 +582,99 @@ table.data-table {
     .travel-toolbar { flex-direction: column; align-items: stretch; }
     .travel-toolbar-actions { justify-content: flex-start; }
 }
+
+
+
+/* =========================================================
+   Module 16 — Crew Portal
+   Profile hero (top of every portal page) + small extras
+   ========================================================= */
+
+.portal-hero {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    background: linear-gradient(135deg, #1a56db 0%, #1e429f 100%);
+    color: #fff;
+    padding: 18px 22px;
+    border-radius: var(--radius);
+    margin-bottom: 18px;
+}
+.portal-hero a { color: #fff; }
+
+.portal-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.35);
+}
+.portal-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.portal-hero-meta {
+    flex: 1;
+    min-width: 0;
+}
+.portal-hero-meta h2 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 600;
+}
+.portal-hero-meta .meta-line {
+    font-size: 13px;
+    opacity: 0.85;
+}
+.portal-hero-meta .meta-line + .meta-line {
+    margin-top: 2px;
+}
+
+.portal-hero-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.portal-hero-actions .badge {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+/* Read-only "field" used inside cards for displaying values without inputs */
+.kv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px 18px;
+}
+.kv-row { min-width: 0; }
+.kv-row > .kv-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+.kv-row > .kv-value {
+    font-size: 14px;
+    word-break: break-word;
+}
+.kv-row > .kv-value.muted { color: var(--text-muted); }
+.kv-row.full { grid-column: 1 / -1; }
+
+@media (max-width: 600px) {
+    .portal-hero { flex-direction: column; align-items: flex-start; }
+    .portal-avatar { width: 56px; height: 56px; font-size: 20px; }
+}
