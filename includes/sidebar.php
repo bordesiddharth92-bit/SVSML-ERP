@@ -1,7 +1,7 @@
 <?php
 /**
- * Left sidebar navigation. Items are stubs for the modules
- * that have not shipped yet; active modules link normally.
+ * Left sidebar navigation. All Module 1–16 destinations are wired up.
+ * Disabled stubs are reserved for any future modules that haven't shipped.
  */
 $user = currentUser();
 $role = $user['role'] ?? null;
@@ -12,9 +12,10 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
 /**
  * Render a navigation link. $href can be null (= disabled stub).
  *
- * Active-link detection treats vessel-edit.php as part of "Vessels"
- * and crew-edit.php as part of "Crew List", so the sidebar still
- * highlights the right section when the user drills into an edit page.
+ * Active-link detection treats edit pages as part of their list page
+ * (e.g. vessel-edit.php → "Vessels", crew-* tabs → "Crew List",
+ * quick-approval-edit.php → "Quick Approval") so the sidebar still
+ * highlights the right section when the user drills in.
  */
 function nav_link(?string $href, string $label, string $current, ?string $tooltip = null): string
 {
@@ -23,10 +24,9 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
         return '<a class="nav-link disabled"' . $title . '>' . h($label) . '</a>';
     }
     $hrefBase = basename($href);
-    // Group edit pages with their list page for highlighting purposes.
     static $editGroups = [
-        'vessels.php'   => ['vessel-edit.php'],
-        'crew.php'      => [
+        'vessels.php'           => ['vessel-edit.php'],
+        'crew.php'              => [
             'crew-edit.php',
             'crew-documents.php',
             'crew-medical.php',
@@ -35,10 +35,15 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
             'crew-signon.php',
             'crew-contracts.php',
             'crew-travel.php',
+            'crew-client-approvals.php',
+            'crew-svsml-approvals.php',
         ],
-        'signon.php'    => ['crew-signon.php'],
-        'contracts.php' => ['crew-contracts.php'],
-        'travel.php'    => ['crew-travel.php'],
+        'signon.php'            => ['crew-signon.php'],
+        'contracts.php'         => ['crew-contracts.php'],
+        'travel.php'            => ['crew-travel.php'],
+        'client-approvals.php'  => ['crew-client-approvals.php'],
+        'svsml-approvals.php'   => ['crew-svsml-approvals.php'],
+        'quick-approvals.php'   => ['quick-approval-edit.php'],
     ];
     $isActive = ($hrefBase === $current)
         || (isset($editGroups[$hrefBase]) && in_array($current, $editGroups[$hrefBase], true));
@@ -53,9 +58,9 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
     </div>
 
     <nav class="nav">
-        <?= nav_link('dashboard.php', 'Dashboard', $current) ?>
-
         <?php if (in_array($role, ['admin', 'sub_admin', 'staff'], true)): ?>
+            <?= nav_link('dashboard.php', 'Dashboard', $current) ?>
+
             <div class="nav-section">Crew</div>
             <?= nav_link('crew.php',      'Crew List', $current) ?>
             <?= nav_link('crew-edit.php', 'Add Crew',  $current) ?>
@@ -68,13 +73,15 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
             <?= nav_link('travel.php',    'Travel Details', $current) ?>
 
             <div class="nav-section">Approvals</div>
-            <?= nav_link(null, 'Client Approval', $current, 'Coming in Module 10') ?>
-            <?= nav_link(null, 'SVSML Approval',  $current, 'Coming in Module 11') ?>
-            <?= nav_link(null, 'Quick Approval',  $current, 'Coming in Module 12') ?>
+            <?= nav_link('client-approvals.php', 'Client Approval', $current) ?>
+            <?= nav_link('svsml-approvals.php',  'SVSML Approval',  $current) ?>
+            <?= nav_link('quick-approvals.php',  'Quick Approval',  $current) ?>
 
             <div class="nav-section">Reports</div>
-            <?= nav_link(null, 'Expiry Alerts', $current, 'Coming in Module 15') ?>
-            <?= nav_link(null, 'Activity Log',  $current, 'Coming in Module 13') ?>
+            <?= nav_link('alerts.php', 'Expiry Alerts', $current) ?>
+            <?php if (in_array($role, ['admin', 'sub_admin'], true)): ?>
+                <?= nav_link('activity-log.php', 'Activity Log', $current) ?>
+            <?php endif; ?>
 
             <div class="nav-section">Settings</div>
             <?= nav_link('dropdowns.php', 'Dropdowns', $current) ?>
@@ -86,10 +93,7 @@ function nav_link(?string $href, string $label, string $current, ?string $toolti
         <?php endif; ?>
 
         <?php if ($role === 'crew'): ?>
-            <div class="nav-section">My Profile</div>
-            <?= nav_link(null, 'My Documents', $current, 'Coming in Module 16') ?>
-            <?= nav_link(null, 'My Travel',    $current, 'Coming in Module 16') ?>
-            <?= nav_link(null, 'My Contract',  $current, 'Coming in Module 16') ?>
+            <?= nav_link('crew-portal.php', 'My Profile', $current) ?>
         <?php endif; ?>
     </nav>
 </aside>
