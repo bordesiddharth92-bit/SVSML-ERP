@@ -65,7 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'add' || $action === 'update') {
         $rowId       = (int)($_POST['doc_id'] ?? 0);
-        $docNumber   = trim($_POST['document_number'] ?? '');
+        // CDC numbers are auto-uppercased + trimmed; other doc numbers
+        // are stored as the operator typed them (passport, visa, etc.
+        // can have mixed-case in some country formats).
+        $docNumberRaw = trim($_POST['document_number'] ?? '');
+        $docNumber    = ($docType === 'cdc')
+            ? normalizeUpperTrim($docNumberRaw)
+            : $docNumberRaw;
         $issueDate   = trim($_POST['issue_date']      ?? '');
         $expiryDate  = trim($_POST['expiry_date']     ?? '');
         $visaTypeId  = ($docType === 'visa' && !empty($_POST['visa_type_id']))
@@ -78,6 +84,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($docType === 'visa' && $action === 'add' && $visaTypeId === null) {
             $errors[] = 'Visa type is required.';
         }
+
+        // Document-type-specific format validation per the spec:
+        //   - cdc      → uppercase letters / digits, 5-20 chars
+        //   - passport → global passport regex (3-20 alphanumeric)
+        // Visa / SID / CV document numbers vary too widely to lock down
+        // with a regex, so we just trust the operator there.
+        if ($docNumber !== '') {
+            if ($docType === 'cdc') {
+                if (($e = validateCDCField($docNumber)) !== null) $errors[] = $e;
+            } elseif ($docType === 'passport') {
+                if (($e = validatePassportField($docNumber)) !== null) $errors[] = $e;
+            }
+        }
+
+        // Date sanity per the spec: issue date can't be in the future,
+        // expiry date must be strictly after issue date when both supplied.
+        if (($e = validateIssueDate($issueDate))                       !== null) $errors[] = $e;
+        if (($e = validateExpiryAfterIssue($expiryDate, $issueDate))   !== null) $errors[] = $e;
 
         // Optional file upload — only validate / move if a file was sent.
         $newFilePath = null;
@@ -253,6 +277,7 @@ include __DIR__ . '/includes/crew-tabs.php';
                                 <?php endif; ?>
                                 <td>
                                     <input type="text" name="document_number" maxlength="100"
+                                           <?php if ($type === 'cdc'): ?>data-validate="cdc"<?php elseif ($type === 'passport'): ?>data-validate="passport"<?php endif; ?>
                                            value="<?= h($row['document_number'] ?? '') ?>">
                                 </td>
                                 <?php if ($sec['has_dates']): ?>
@@ -312,7 +337,13 @@ include __DIR__ . '/includes/crew-tabs.php';
                     <?php endif; ?>
                     <div class="form-row">
                         <label>Document number</label>
-                        <input type="text" name="document_number" maxlength="100">
+                        <input type="text" name="document_number" maxlength="100"
+                               <?php if ($type === 'cdc'): ?>data-validate="cdc" placeholder="e.g. MUM123456"<?php elseif ($type === 'passport'): ?>data-validate="passport" placeholder="e.g. N1234567"<?php endif; ?>>
+                        <?php if ($type === 'cdc'): ?>
+                            <p class="help-text">Uppercase letters / digits, 5–20 characters.</p>
+                        <?php elseif ($type === 'passport'): ?>
+                            <p class="help-text">3–20 uppercase letters / digits.</p>
+                        <?php endif; ?>
                     </div>
                     <?php if ($sec['has_dates']): ?>
                         <div class="form-row">
