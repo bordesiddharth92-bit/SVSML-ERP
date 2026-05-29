@@ -336,3 +336,101 @@ table.data-table {
     margin: 0;
 }
 .switch-row .help-text { margin: 0 0 0 auto; max-width: 280px; text-align: right; }
+
+/* =========================================================
+   Module 3 / 4 additions — list pages, filter bar, pagination
+   ========================================================= */
+
+/* ---------- Filter bar (top of list pages) ---------- */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 14px;
+}
+.filter-bar .form-row { margin: 0; flex: 0 0 auto; }
+.filter-bar input[type=text],
+.filter-bar input[type=search],
+.filter-bar select {
+    min-width: 180px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+.filter-bar .filter-spacer { flex: 1; }
+.filter-bar .filter-actions { display: flex; gap: 8px; }
+
+/* ---------- Pagination ---------- */
+.pagination {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+.pagination a,
+.pagination span {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 13px;
+    text-decoration: none;
+    min-width: 32px;
+    text-align: center;
+}
+.pagination a:hover { background: var(--surface); text-decoration: none; }
+.pagination .current {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.pagination .disabled {
+    color: var(--text-muted);
+    background: var(--surface);
+    cursor: not-allowed;
+}
+
+/* ---------- Result count line ---------- */
+.result-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+/* ---------- Conditional form fields (toggle by JS) ---------- */
+.conditional { display: none; }
+.conditional.is-shown { display: block; }
+
+/* ---------- Empty state in list pages ---------- */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+.empty-state h3 {
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: var(--text);
+}
+.empty-state p { margin: 0 0 12px; }
+
+/* ---------- Toolbar above tables ---------- */
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* ---------- Compact action links inside table cells ---------- */
+.action-link {
+    color: var(--primary);
+    font-size: 13px;
+    margin-right: 8px;
+}
+.action-link.danger { color: var(--red); }
