@@ -299,10 +299,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* ---- Per-row delete ---- */
     elseif ($action === 'delete') {
         $rowId = (int)($_POST['travel_id'] ?? 0);
-        $cur = $pdo->prepare("SELECT detail_label FROM travel_details WHERE id = :i AND crew_id = :c");
+        $cur = $pdo->prepare("SELECT detail_label, file_path FROM travel_details WHERE id = :i AND crew_id = :c");
         $cur->execute([':i' => $rowId, ':c' => $crewId]);
         $row = $cur->fetch();
         if ($row) {
+            // Delete the file from disk before removing the row.
+            if (!empty($row['file_path'])) {
+                $abs = rtrim(UPLOAD_DIR, '/') . '/' . ltrim($row['file_path'], '/');
+                if (is_file($abs)) @unlink($abs);
+            }
             $pdo->prepare("DELETE FROM travel_details WHERE id = :i AND crew_id = :c")
                 ->execute([':i' => $rowId, ':c' => $crewId]);
             logActivity(
@@ -310,6 +315,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "Deleted travel row '{$row['detail_label']}' for crew {$crewId}"
             );
             flash('success', "Deleted '{$row['detail_label']}'.");
+        }
+    }
+
+    /* ---- Upload / replace file on a single travel row ---- */
+    elseif ($action === 'upload_travel_file') {
+        $rowId = (int)($_POST['travel_id'] ?? 0);
+        $cur   = $pdo->prepare("SELECT * FROM travel_details WHERE id = :i AND crew_id = :c");
+        $cur->execute([':i' => $rowId, ':c' => $crewId]);
+        $row   = $cur->fetch();
+        if (!$row) {
+            flash('error', 'Travel row not found.');
+        } else {
+            try {
+                // Build a friendly slug for the filename: row label + sr.
+                $slug    = 'Travel' . (int)$row['sr_number'] . '_' . ($row['detail_label'] ?? 'Segment');
+                $newPath = saveCrewUpload('file', $crew, $slug, false, 'travel');
+                // If there was already a file on this row at a different
+                // path, delete the old one (the helper already overwrote
+                // a same-named one in place).
+                if (!empty($row['file_path']) && $row['file_path'] !== $newPath) {
+                    $oldAbs = rtrim(UPLOAD_DIR, '/') . '/' . ltrim($row['file_path'], '/');
+                    if (is_file($oldAbs)) @unlink($oldAbs);
+                }
+                $pdo->prepare("UPDATE travel_details SET file_path = :f, updated_at = CURRENT_TIMESTAMP WHERE id = :i AND crew_id = :c")
+                    ->execute([':f' => $newPath, ':i' => $rowId, ':c' => $crewId]);
+                logActivity($pdo, $user['id'], 'upload', 'travel_details', $rowId,
+                    "Uploaded ticket file for travel row {$rowId} (crew {$crewId})");
+                flash('success', 'File uploaded.');
+            } catch (RuntimeException $e) {
+                flash('error', 'Upload failed: ' . $e->getMessage());
+            }
         }
     }
 
@@ -416,10 +452,32 @@ function renderTravelRow(array $row): string
         </td>
 
         <td class="td-action">
-            <button type="submit" form="travel-delete-<?= $rid ?>" class="btn btn-danger btn-sm"
-                    data-confirm="Delete travel row '<?= h($row['detail_label']) ?>'?">
-                Delete
-            </button>
+            <div class="travel-action-stack">
+                <?php if (!empty($row['file_path'])): ?>
+                    <a class="action-link" target="_blank" rel="noopener"
+                       href="<?= asset('uploads/' . $row['file_path']) ?>">View file</a>
+                <?php endif; ?>
+                <button type="submit" form="travel-delete-<?= $rid ?>" class="btn btn-danger btn-sm"
+                        data-confirm="Delete travel row '<?= h($row['detail_label']) ?>'?">
+                    Delete
+                </button>
+            </div>
+        </td>
+    </tr>
+    <tr class="travel-row-attach">
+        <td colspan="8">
+            <form method="post" enctype="multipart/form-data" class="travel-attach-form" novalidate>
+                <?= csrfField() ?>
+                <input type="hidden" name="action"    value="upload_travel_file">
+                <input type="hidden" name="travel_id" value="<?= $rid ?>">
+                <label class="travel-attach-label">
+                    <?= !empty($row['file_path']) ? 'Replace ticket file:' : 'Attach ticket file:' ?>
+                </label>
+                <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.docx">
+                <button type="submit" class="btn btn-secondary btn-sm">
+                    <?= !empty($row['file_path']) ? 'Replace' : 'Upload' ?>
+                </button>
+            </form>
         </td>
     </tr>
     <?php

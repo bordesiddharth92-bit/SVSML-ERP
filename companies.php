@@ -51,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $stmt->execute([':n' => $name]);
                 $newId = (int)$pdo->lastInsertId();
+                // Auto-create the company's upload folder per the path spec.
+                ensureCompanyUploadDir($name);
                 logActivity(
                     $pdo, $user['id'], 'create', 'companies', $newId,
                     "Added company '{$name}'"

@@ -1058,3 +1058,197 @@ select.has-error:focus {
     .main { width: 100%; }
     .card { border: 1px solid #ccc; box-shadow: none; }
 }
+
+
+
+/* =========================================================
+   Module 18 — Crew onboarding (multi-step pre-portal form)
+   ========================================================= */
+
+.onboarding-body {
+    background: linear-gradient(135deg, #0a1628 0%, #143256 100%);
+    background-color: #0a1628;
+    min-height: 100vh;
+    padding: 32px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+.onboarding-wrap {
+    width: 100%;
+    max-width: 760px;
+}
+.onboarding-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 32px 36px;
+    box-shadow: var(--shadow-lg);
+}
+
+.onboarding-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+}
+.onboarding-header .brand-logo { width: 44px; height: 44px; }
+.onboarding-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+}
+.onboarding-subtitle {
+    color: var(--text-muted);
+    font-size: 13.5px;
+    margin-top: 2px;
+}
+
+.onboarding-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    display: flex;
+    gap: 8px;
+    counter-reset: step;
+    flex-wrap: wrap;
+}
+.onboarding-steps li {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    min-width: 0;
+}
+.onboarding-steps .onboarding-step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    color: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.onboarding-steps li.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.onboarding-steps li.active .onboarding-step-num {
+    background: var(--accent);
+    color: var(--primary);
+}
+.onboarding-steps li.done {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--primary);
+}
+.onboarding-steps li.done .onboarding-step-num { background: var(--accent); color: var(--primary); }
+.onboarding-steps .onboarding-step-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.agree-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+    margin: 8px 0;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    line-height: 1.5;
+}
+.agree-row input[type="checkbox"] {
+    flex-shrink: 0;
+    margin-top: 3px;
+    transform: scale(1.15);
+    accent-color: var(--primary);
+}
+.agree-row label {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: normal;
+}
+.agree-row label strong { color: var(--primary); display: inline-block; margin-right: 4px; }
+
+.contact-block {
+    margin: 18px 0 22px;
+    padding: 14px 16px;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+}
+.contact-block h4 {
+    margin: 0 0 4px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.contact-block p { margin: 0; }
+
+.kin-block {
+    margin-bottom: 22px;
+    padding: 18px 20px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+.kin-block .section-title { margin-top: 0; }
+
+@media (max-width: 700px) {
+    .onboarding-card { padding: 22px 20px; }
+    .onboarding-steps { flex-direction: column; }
+    .onboarding-steps li { flex: 0 0 auto; }
+    .onboarding-step-lbl { white-space: normal; }
+}
+
+
+
+/* =========================================================
+   Module 9 — Travel sheet: per-row file attachment row
+   ========================================================= */
+.travel-row-attach td {
+    background: var(--surface-alt) !important;
+    border-bottom: 2px solid var(--border-strong) !important;
+    padding: 6px 14px !important;
+}
+.travel-attach-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.travel-attach-label {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    margin: 0;
+}
+.travel-attach-form input[type="file"] {
+    font-size: 12px;
+    padding: 4px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.travel-action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+}
