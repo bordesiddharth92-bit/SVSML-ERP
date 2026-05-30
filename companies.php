@@ -32,6 +32,20 @@ requireRole(['admin', 'sub_admin', 'staff']);
 $user = currentUser();
 
 /**
+ * Contact columns live on the `companies` table only after CHANGES.sql
+ * has been applied. Probe which of them actually exist so this page works
+ * (degrades gracefully) even on a database where the migration is still
+ * pending — rather than crashing with "Unknown column 'c.address'".
+ */
+$CONTACT_COLS  = ['address', 'contact_person', 'contact_number', 'email'];
+$presentCols   = array_values(array_filter(
+    $CONTACT_COLS,
+    fn (string $col): bool => columnExists($pdo, 'companies', $col)
+));
+$hasContactCols = count($presentCols) === count($CONTACT_COLS);
+$missingCols    = array_values(array_diff($CONTACT_COLS, $presentCols));
+
+/**
  * Validate the shared company field set. Returns an error string, or
  * null when the input is acceptable. Trimming is the caller's job.
  */
@@ -79,18 +93,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($chk->fetch()) {
                 flash('error', "'{$name}' already exists.");
             } else {
-                $stmt = $pdo->prepare(
-                    "INSERT INTO companies
-                        (company_name, address, contact_person, contact_number, email, created_at)
-                     VALUES (:n, :ad, :cp, :cn, :em, NOW())"
-                );
-                $stmt->execute([
-                    ':n'  => $name,
-                    ':ad' => $address       !== '' ? $address       : null,
-                    ':cp' => $contactPerson !== '' ? $contactPerson : null,
-                    ':cn' => $contactNumber !== '' ? $contactNumber : null,
-                    ':em' => $email         !== '' ? $email         : null,
-                ]);
+                // Build the column list from only the contact columns that
+                // actually exist, so the INSERT works pre- and post-migration.
+                $vals = [
+                    'address'        => $address       !== '' ? $address       : null,
+                    'contact_person' => $contactPerson !== '' ? $contactPerson : null,
+                    'contact_number' => $contactNumber !== '' ? $contactNumber : null,
+                    'email'          => $email         !== '' ? $email         : null,
+                ];
+                $cols   = ['company_name'];
+                $marks  = [':n'];
+                $params = [':n' => $name];
+                foreach ($presentCols as $col) {
+                    $cols[]          = $col;
+                    $marks[]         = ':' . $col;
+                    $params[':' . $col] = $vals[$col];
+                }
+                $cols[]  = 'created_at';
+                $marks[] = 'NOW()';
+
+                $sql = 'INSERT INTO companies (`' . implode('`, `', $cols) . '`) VALUES ('
+                     . implode(', ', $marks) . ')';
+                $pdo->prepare($sql)->execute($params);
+
                 $newId = (int)$pdo->lastInsertId();
                 // Auto-create the company's upload folder per the path spec.
                 ensureCompanyUploadDir($name);
@@ -125,23 +150,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($chk->fetch()) {
                 flash('error', "'{$name}' already exists.");
             } else {
-                $stmt = $pdo->prepare(
-                    "UPDATE companies
-                        SET company_name   = :n,
-                            address        = :ad,
-                            contact_person = :cp,
-                            contact_number = :cn,
-                            email          = :em
-                      WHERE id = :i"
-                );
-                $stmt->execute([
-                    ':n'  => $name,
-                    ':ad' => $address       !== '' ? $address       : null,
-                    ':cp' => $contactPerson !== '' ? $contactPerson : null,
-                    ':cn' => $contactNumber !== '' ? $contactNumber : null,
-                    ':em' => $email         !== '' ? $email         : null,
-                    ':i'  => $id,
-                ]);
+                $vals = [
+                    'address'        => $address       !== '' ? $address       : null,
+                    'contact_person' => $contactPerson !== '' ? $contactPerson : null,
+                    'contact_number' => $contactNumber !== '' ? $contactNumber : null,
+                    'email'          => $email         !== '' ? $email         : null,
+                ];
+                $sets   = ['company_name = :n'];
+                $params = [':n' => $name, ':i' => $id];
+                foreach ($presentCols as $col) {
+                    $sets[]             = "`{$col}` = :{$col}";
+                    $params[':' . $col] = $vals[$col];
+                }
+                $sql = 'UPDATE companies SET ' . implode(', ', $sets) . ' WHERE id = :i';
+                $pdo->prepare($sql)->execute($params);
+
                 logActivity(
                     $pdo, $user['id'], 'update', 'companies', $id,
                     "Updated company '{$name}' (id={$id})"
@@ -190,15 +213,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // -------------------------------------------------------------
 // GET — load companies with usage counts
+//
+// Only SELECT the contact columns that exist; alias the rest to NULL so
+// the rendering code below can read $c['address'] etc. uniformly whether
+// or not CHANGES.sql has been applied yet.
 // -------------------------------------------------------------
+$contactSelect = '';
+foreach ($CONTACT_COLS as $col) {
+    $contactSelect .= in_array($col, $presentCols, true)
+        ? "           c.`{$col}`,\n"
+        : "           NULL AS `{$col}`,\n";
+}
+
 $companies = $pdo->query("
     SELECT c.id,
            c.company_name,
-           c.address,
-           c.contact_person,
-           c.contact_number,
-           c.email,
-           (SELECT COUNT(*) FROM vessels v WHERE v.company_id = c.id) AS vessel_count,
+{$contactSelect}           (SELECT COUNT(*) FROM vessels v WHERE v.company_id = c.id) AS vessel_count,
            (SELECT COUNT(*) FROM crew    cr WHERE cr.company_id = c.id) AS crew_count
       FROM companies c
      ORDER BY c.company_name
@@ -217,6 +247,15 @@ include __DIR__ . '/includes/header.php';
         and crew (the rows themselves are kept). Only the company name is
         required — the contact fields are optional.
     </p>
+    <?php if (!$hasContactCols): ?>
+        <div class="flash flash-warning" style="margin-top:12px">
+            <strong>Database migration pending.</strong>
+            The contact columns (<code><?= h(implode('</code>, <code>', $missingCols)) ?></code>)
+            are not yet present on the <code>companies</code> table, so any contact
+            details entered below will not be saved. Run <code>CHANGES.sql</code> on
+            the database to enable them. Company names can still be managed normally.
+        </div>
+    <?php endif; ?>
 </div>
 
 <div class="card">

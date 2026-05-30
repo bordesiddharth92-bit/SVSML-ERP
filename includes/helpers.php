@@ -459,6 +459,142 @@ function fetchCrewWithJoins(PDO $pdo, int $crewId): ?array
     return $row ?: null;
 }
 
+/* ---------------- Schema introspection helpers ---------------- */
+
+/**
+ * Return the set of column names for a table as an associative array
+ * (column => true). Cached per request. Returns an empty array when the
+ * table is missing or cannot be introspected, so callers can degrade
+ * gracefully when CHANGES.sql hasn't been applied yet (rather than
+ * crashing with "Unknown column").
+ */
+function tableColumnSet(PDO $pdo, string $table): array
+{
+    static $cache = [];
+    $key = strtolower($table);
+    if (array_key_exists($key, $cache)) return $cache[$key];
+
+    $set = [];
+    try {
+        $safe = str_replace('`', '', $table);
+        $stmt = $pdo->query("SHOW COLUMNS FROM `{$safe}`");
+        foreach ($stmt as $row) {
+            if (isset($row['Field'])) $set[$row['Field']] = true;
+        }
+    } catch (PDOException $e) {
+        // Table absent / no privileges — leave $set empty.
+        error_log('[SVSML-ERP] tableColumnSet(' . $table . '): ' . $e->getMessage());
+    }
+    $cache[$key] = $set;
+    return $set;
+}
+
+/** True when $column exists on $table (per tableColumnSet()). */
+function columnExists(PDO $pdo, string $table, string $column): bool
+{
+    return isset(tableColumnSet($pdo, $table)[$column]);
+}
+
+/* ---------------- Next-of-kin (crew.next_of_kin JSON) ---------------- */
+
+/**
+ * Decode the crew.next_of_kin JSON column into a normalised list of up
+ * to 2 entries, each with a fixed key shape. Tolerates null / blank /
+ * malformed input by returning an empty array. Shared by
+ * crew-onboarding.php, crew-portal-personal.php and crew-edit.php so the
+ * stored JSON shape stays consistent everywhere.
+ */
+function decodeNextOfKinJson(?string $raw): array
+{
+    if ($raw === null || trim($raw) === '') return [];
+    $arr = json_decode($raw, true);
+    if (!is_array($arr)) return [];
+    $out = [];
+    foreach ($arr as $k) {
+        if (!is_array($k)) continue;
+        $out[] = [
+            'name'       => (string)($k['name']       ?? ''),
+            'address'    => (string)($k['address']    ?? ''),
+            'relation'   => (string)($k['relation']   ?? ''),
+            'percentage' => (string)($k['percentage'] ?? ''),
+            'mobile1'    => (string)($k['mobile1']    ?? ''),
+            'mobile2'    => (string)($k['mobile2']    ?? ''),
+            'email'      => (string)($k['email']      ?? ''),
+        ];
+        if (count($out) >= 2) break;
+    }
+    return $out;
+}
+
+/** An empty next-of-kin record, used to pad a form to two slots. */
+function emptyNextOfKin(): array
+{
+    return [
+        'name' => '', 'address' => '', 'relation' => '', 'percentage' => '',
+        'mobile1' => '', 'mobile2' => '', 'email' => '',
+    ];
+}
+
+/**
+ * Read up to two next-of-kin entries from a POST array (expects
+ * $post['kin'][0..1] with name / relation / address / percentage /
+ * mobile1 / mobile2 / email keys), validate them, and return the JSON
+ * string ready for the crew.next_of_kin column (or null when no entries
+ * were supplied). Validation problems are appended to $errors.
+ *
+ * @param bool $requireFirstName when true, at least one named entry is
+ *        mandatory (used by onboarding); when false an entirely-blank
+ *        set is allowed (profile edits, where kin may be cleared).
+ */
+function collectNextOfKinFromPost(array $post, array &$errors, bool $requireFirstName = false): ?string
+{
+    $kinList  = [];
+    $totalPct = 0.0;
+    $raw = (isset($post['kin']) && is_array($post['kin'])) ? $post['kin'] : [];
+
+    for ($i = 0; $i < 2; $i++) {
+        $name     = trim($raw[$i]['name']       ?? '');
+        $address  = trim($raw[$i]['address']    ?? '');
+        $relation = trim($raw[$i]['relation']   ?? '');
+        $pctRaw   = trim($raw[$i]['percentage'] ?? '');
+        $mob1     = normalizeMobileValue($raw[$i]['mobile1'] ?? '');
+        $mob2     = normalizeMobileValue($raw[$i]['mobile2'] ?? '');
+        $email    = normalizeEmailValue($raw[$i]['email']    ?? '');
+
+        // Skip entirely-blank rows.
+        if ($name === '' && $address === '' && $relation === ''
+            && $pctRaw === '' && $mob1 === '' && $mob2 === '' && $email === '') continue;
+
+        if ($name === '') $errors[] = 'Kin #' . ($i + 1) . ': name is required.';
+        if ($mob1 !== '' && ($e = validateMobileField($mob1)) !== null) $errors[] = 'Kin #' . ($i + 1) . ' mobile 1: ' . $e;
+        if ($mob2 !== '' && ($e = validateMobileField($mob2)) !== null) $errors[] = 'Kin #' . ($i + 1) . ' mobile 2: ' . $e;
+        if ($email !== '' && ($e = validateEmailField($email)) !== null) $errors[] = 'Kin #' . ($i + 1) . ' email: ' . $e;
+
+        $pct = null;
+        if ($pctRaw !== '') {
+            if (!is_numeric($pctRaw))                           $errors[] = 'Kin #' . ($i + 1) . ': percentage must be a number.';
+            elseif ((float)$pctRaw < 0 || (float)$pctRaw > 100) $errors[] = 'Kin #' . ($i + 1) . ': percentage must be between 0 and 100.';
+            else                                                $pct = (float)$pctRaw;
+        }
+        if ($pct !== null) $totalPct += $pct;
+
+        $kinList[] = [
+            'name'       => $name,
+            'address'    => $address,
+            'relation'   => $relation,
+            'percentage' => $pct === null ? '' : (string)$pct,
+            'mobile1'    => $mob1,
+            'mobile2'    => $mob2,
+            'email'      => $email,
+        ];
+    }
+
+    if ($totalPct > 100.0001) $errors[] = 'Total percentage across kin entries cannot exceed 100.';
+    if ($requireFirstName && empty($kinList)) $errors[] = 'At least one next-of-kin entry is required.';
+
+    return empty($kinList) ? null : json_encode($kinList, JSON_UNESCAPED_UNICODE);
+}
+
 /* ---------------- Default course seeding ---------------- */
 
 /** Default basic course names seeded for every new crew. */

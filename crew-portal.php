@@ -199,9 +199,11 @@ $photoUrl = crewPhotoUrl($latestContract);
     <h3 class="card-title">Need to update something?</h3>
     <p class="help-text">
         Documents, medical certificates, courses and travel can be uploaded
-        directly from the relevant tabs above. To update personal details,
-        bank info or next-of-kin, please contact SVSML — your manning agent
-        will make the change for you. Change your portal password from the
+        directly from the relevant tabs above. To update your personal details,
+        bank info or next-of-kin, head to the
+        <a href="<?= asset('crew-portal-personal.php') ?>">My Profile</a> tab.
+        Your vessel and company assignment are managed by SVSML — contact your
+        manning agent if those need changing. Change your portal password from the
         <a href="<?= asset('crew-portal-password.php') ?>">Password</a> tab.
     </p>
 </div>
