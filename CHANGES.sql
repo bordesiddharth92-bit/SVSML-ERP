@@ -232,3 +232,48 @@ SET @sql = IF(@col = 0,
     'ALTER TABLE `crew_medical` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0',
     'SELECT 1');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+
+-- =============================================================
+-- Module 3 — Company contact details
+--
+-- The companies manager (companies.php) now captures contact
+-- information alongside the company name:
+--   * address        — registered / correspondence address
+--   * contact_person — primary point of contact
+--   * contact_number — phone (kept as VARCHAR to allow +country,
+--                      spaces and extensions)
+--   * email          — validated in PHP via FILTER_VALIDATE_EMAIL
+-- All four are nullable — only company_name remains mandatory, so
+-- existing rows are unaffected and pre-existing FKs are untouched.
+-- The ALTERs are guarded by information_schema checks so re-running
+-- this file stays idempotent.
+-- =============================================================
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'address');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `companies` ADD COLUMN `address` VARCHAR(255) NULL DEFAULT NULL AFTER `company_name`',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'contact_person');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `companies` ADD COLUMN `contact_person` VARCHAR(120) NULL DEFAULT NULL AFTER `address`',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'contact_number');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `companies` ADD COLUMN `contact_number` VARCHAR(40) NULL DEFAULT NULL AFTER `contact_person`',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'email');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `companies` ADD COLUMN `email` VARCHAR(150) NULL DEFAULT NULL AFTER `contact_number`',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
