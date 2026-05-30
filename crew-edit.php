@@ -182,6 +182,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $accessSql = $canToggleAccess ? ", crew_access_enabled = :ca" : "";
                 if ($canToggleAccess) $params[':ca'] = $crewAccessEnabled;
 
+                // Capture the crew row BEFORE update so relocateCrewUploads()
+                // knows which folder to move from when company / rank change.
+                $oldCrewRow = fetchCrewWithJoins($pdo, $postId);
+
                 $stmt = $pdo->prepare(
                     "UPDATE crew SET
                         full_name = :fn, indos_number = :in, passport_number = :pp,
@@ -195,6 +199,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      WHERE id = :i"
                 );
                 $stmt->execute($params);
+
+                // Move uploads if the crew folder identity changed.
+                $newCrewRow = fetchCrewWithJoins($pdo, $postId);
+                if ($oldCrewRow && $newCrewRow) {
+                    relocateCrewUploads($pdo, $oldCrewRow, $newCrewRow);
+                }
+
                 logActivity(
                     $pdo, $user['id'], 'update', 'crew', $postId,
                     "Updated crew '{$fullName}'"

@@ -226,3 +226,38 @@ function requireCrew(): void
         exit;
     }
 }
+
+/**
+ * Like requireCrew(), but also bounces the crew to the onboarding form
+ * until they've finished it (crew.onboarding_complete = 1).
+ *
+ * Use this on every regular crew-portal-*.php page so a brand-new crew
+ * member is forced through onboarding before they can browse anywhere
+ * else. crew-onboarding.php and crew-portal-password.php call
+ * requireCrew() directly so they stay reachable mid-flow.
+ *
+ * Degrades gracefully to requireCrew() when CHANGES.sql hasn't been
+ * applied yet (the column is missing) — better to let the crew in
+ * than to lock everyone out of the portal during a partial deploy.
+ */
+function requireOnboardedCrew(PDO $pdo): void
+{
+    requireCrew();
+    $crewId = currentCrewId();
+    if (!$crewId) return;
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT onboarding_complete FROM crew WHERE id = :i"
+        );
+        $stmt->execute([':i' => $crewId]);
+        $val = $stmt->fetchColumn();
+        if ($val === false) return;
+        if ((int)$val !== 1) {
+            header('Location: ' . url('crew-onboarding.php'));
+            exit;
+        }
+    } catch (PDOException $e) {
+        // Column missing → migration pending. Don't block the user.
+        return;
+    }
+}
