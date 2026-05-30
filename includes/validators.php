@@ -5,7 +5,9 @@
  * Server-side validation rules for the identity fields the operator
  * captures while creating / editing crew, documents, and contracts:
  *
- *   - Passport number    — global "[A-Z0-9]{3,20}" with optional country override
+ *   - Passport number    — relaxed: "[A-Z0-9\-\s]{5,20}", case-insensitive.
+ *                          (Country-specific patterns kept as a doc-only
+ *                          extension point; not enforced.)
  *   - Mobile number      — international E.164
  *   - Email              — standard format check (no MX / OTP / 3rd-party)
  *   - CDC number         — "[A-Z0-9]{5,20}"
@@ -87,9 +89,19 @@ const COUNTRY_PASSPORT_FORMATS = [
 /**
  * Validate a passport number.
  *
+ * Per the relaxed spec, passport numbers are accepted as 5–20 chars of
+ * letters / digits / hyphens / spaces. Real-world passport books for
+ * many countries embed hyphens (e.g. UK "123-456-789") and SVSML's
+ * operations team needs the form to accept the value as printed.
+ *
+ * The country-specific patterns in COUNTRY_PASSPORT_FORMATS are kept
+ * in this file as a documented extension point but are deliberately
+ * NOT applied by this validator — they were rejecting real passports
+ * during onboarding. Any future stricter-by-country mode should call
+ * those patterns directly rather than going through this function.
+ *
  * @param string|null $value    raw operator input
- * @param string|null $country  optional nationality / country to apply
- *                              a tighter format check than the global regex
+ * @param string|null $country  retained for API compatibility; ignored
  * @param bool        $required true to also enforce non-empty
  */
 function validatePassportField(?string $value, ?string $country = null, bool $required = false): ?string
@@ -98,15 +110,10 @@ function validatePassportField(?string $value, ?string $country = null, bool $re
     if ($v === '') {
         return $required ? 'Passport number is required.' : null;
     }
-    if ($country !== null && $country !== '') {
-        $key = strtoupper(trim($country));
-        if (isset(COUNTRY_PASSPORT_FORMATS[$key])) {
-            return preg_match(COUNTRY_PASSPORT_FORMATS[$key], $v)
-                ? null
-                : 'Invalid passport number format.';
-        }
-    }
-    return preg_match('/^[A-Z0-9]{3,20}$/', $v)
+    // Universal relaxed pattern: letters / digits / hyphens / spaces,
+    // 5–20 chars. The /i flag is harmless because $v is already
+    // upper-cased by normalizeUpperTrim().
+    return preg_match('/^[A-Z0-9\-\s]{5,20}$/i', $v)
         ? null
         : 'Invalid passport number format.';
 }

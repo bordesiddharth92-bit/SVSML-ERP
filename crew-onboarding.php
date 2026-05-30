@@ -130,12 +130,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* ---- Step 1: personal details + photo ---- */
     elseif ($action === 'save_personal') {
+        // Passport is admin-managed: if SVSML has already set a passport
+        // number for this crew, the form renders it as readonly and we
+        // refuse to let the crew change it from POST. We pull the
+        // existing value first so we can preserve it regardless of
+        // what came back in the form.
+        $existingPassport = '';
+        try {
+            $st = $pdo->prepare("SELECT passport_number FROM crew WHERE id = :i");
+            $st->execute([':i' => $crewId]);
+            $existingPassport = (string)($st->fetchColumn() ?: '');
+        } catch (PDOException $e) { /* ignore — fall through */ }
+        $passportLocked = ($existingPassport !== '');
+
         $fullName    = trim($_POST['full_name']    ?? '');
         $rankId      = !empty($_POST['rank_id']) ? (int)$_POST['rank_id'] : null;
         $dob         = trim($_POST['date_of_birth']  ?? '');
         $placeBirth  = trim($_POST['place_of_birth'] ?? '');
         $nationality = trim($_POST['nationality']    ?? '');
-        $passport    = normalizeUpperTrim($_POST['passport_number'] ?? '');
+        $passport    = $passportLocked
+            ? normalizeUpperTrim($existingPassport)
+            : normalizeUpperTrim($_POST['passport_number'] ?? '');
         $cdc         = normalizeUpperTrim($_POST['cdc_number']      ?? '');
         $contact     = normalizeMobileValue($_POST['contact_number'] ?? '');
         $address     = trim($_POST['full_address']    ?? '');
@@ -147,12 +162,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($rankId  === null) $errors[] = 'Please select your rank.';
         if ($dob !== '' && !DateTime::createFromFormat('Y-m-d', $dob)) $errors[] = 'Invalid date of birth.';
         if ($expectedDep !== '' && !DateTime::createFromFormat('Y-m-d', $expectedDep)) $errors[] = 'Invalid expected departure date.';
-        if (($e = validatePassportField($passport, $nationality !== '' ? $nationality : null)) !== null) $errors[] = $e;
+        // Always run the relaxed validator (no country override) per
+        // the spec. When the field is locked we already trust the value.
+        if (!$passportLocked) {
+            if (($e = validatePassportField($passport)) !== null) $errors[] = $e;
+        }
         if ($cdc !== '' && ($e = validateCDCField($cdc))     !== null) $errors[] = $e;
         if (($e = validateMobileField($contact))             !== null) $errors[] = $e;
 
-        // INDOS / passport uniqueness against OTHER crew rows (allow self).
-        if (empty($errors) && !isPassportUnique($pdo, $passport, $crewId)) {
+        // Passport uniqueness against OTHER crew rows (allow self).
+        // Only run when the crew can actually change the passport —
+        // otherwise the existing value is by definition unique already.
+        if (empty($errors) && !$passportLocked && !isPassportUnique($pdo, $passport, $crewId)) {
             $errors[] = "Passport '{$passport}' is already used by another crew member.";
         }
 
@@ -506,11 +527,25 @@ $pageTitle = 'Welcome aboard — Onboarding';
                         </datalist>
                     </div>
                     <div class="form-row">
-                        <label for="passport_number">Passport number *</label>
-                        <input type="text" id="passport_number" name="passport_number" required maxlength="50"
-                               data-validate="passport"
-                               value="<?= h($crew['passport_number'] ?? '') ?>"
-                               placeholder="N1234567">
+                        <label for="passport_number">Passport number<?= empty($crew['passport_number']) ? ' *' : '' ?></label>
+                        <?php if (!empty($crew['passport_number'])): ?>
+                            <input type="text" id="passport_number" name="passport_number"
+                                   value="<?= h($crew['passport_number']) ?>" maxlength="50"
+                                   readonly aria-readonly="true"
+                                   style="background: var(--surface-alt); cursor: not-allowed;">
+                            <p class="help-text">
+                                Set by SVSML — to correct your passport number, please
+                                contact your manning agent.
+                            </p>
+                        <?php else: ?>
+                            <input type="text" id="passport_number" name="passport_number" required maxlength="50"
+                                   data-validate="passport"
+                                   value="<?= h($crew['passport_number'] ?? '') ?>"
+                                   placeholder="N1234567">
+                            <p class="help-text">
+                                5–20 characters. Letters, digits, hyphens or spaces are allowed.
+                            </p>
+                        <?php endif; ?>
                     </div>
                     <div class="form-row">
                         <label for="cdc_number">Seaman / CDC book number</label>
