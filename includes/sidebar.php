@@ -150,7 +150,7 @@ function nav_link(?string $href, string $label, string $current, string $icon = 
             <?= nav_link('crew-portal-sailing.php',   'Sailing',   $current, 'anchor') ?>
             <?= nav_link('crew-portal-contracts.php', 'Contracts', $current, 'file-text') ?>
             <?= nav_link('crew-portal-travel.php',    'Travel',    $current, 'plane') ?>
-            <?= nav_link('crew-portal-approvals.php', 'Approvals', $current, 'dollar') ?>
+            <?php /* Approvals tab removed — crew never see financial / dues data. */ ?>
 
             <div class="nav-section">Account</div>
             <?= nav_link('crew-portal-password.php',  'Change password', $current, 'key') ?>

@@ -13,7 +13,7 @@ require __DIR__ . '/config/app.php';
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/helpers.php';
 
-requireCrew();
+requireOnboardedCrew($pdo);
 $crewId = currentCrewId();
 $crew   = $crewId ? fetchCrewWithJoins($pdo, $crewId) : null;
 if (!$crew) { logoutCurrentUser(); header('Location: ' . url('crew-login.php')); exit; }

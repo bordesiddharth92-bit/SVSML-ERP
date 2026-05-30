@@ -22,7 +22,7 @@ $portalTabs = [
     'sailing'    => ['label' => 'Sailing',    'href' => 'crew-portal-sailing.php'],
     'contracts'  => ['label' => 'Contracts',  'href' => 'crew-portal-contracts.php'],
     'travel'     => ['label' => 'Travel',     'href' => 'crew-portal-travel.php'],
-    'approvals'  => ['label' => 'Approvals',  'href' => 'crew-portal-approvals.php'],
+    /* 'approvals' tab removed — crew never see financial / dues data. */
     'password'   => ['label' => 'Password',   'href' => 'crew-portal-password.php'],
 ];
 ?>

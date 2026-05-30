@@ -17,6 +17,7 @@
  */
 require_once __DIR__ . '/travel-data.php';
 require_once __DIR__ . '/validators.php';
+require_once __DIR__ . '/upload-paths.php';
 
 /** Short HTML-escape helper for output. */
 function h($s): string
@@ -140,6 +141,45 @@ function uploadFile(string $fileKey, string $subDir, string $prefix, int $ownerI
         throw new RuntimeException('File type not allowed. Allowed: ' . implode(', ', ALLOWED_UPLOAD_EXT));
     }
 
+    // Module 18 path migration: when the legacy caller passes a
+    // crew-scoped subDir like "crew/{id}" (which every per-crew staff
+    // page does — crew-documents, crew-medical, crew-courses,
+    // crew-signon, etc.), reroute the file into the canonical
+    // {Company}/{Crew_Name}_{Rank}/ folder. This keeps legacy
+    // call-sites working without touching every page.
+    if (preg_match('#^crew/(\d+)$#', trim($subDir, '/'), $m)) {
+        global $pdo;
+        if (isset($pdo) && $pdo instanceof PDO) {
+            try {
+                $crew = fetchCrewWithJoins($pdo, (int)$m[1]);
+                if ($crew && function_exists('saveCrewUpload')) {
+                    return saveCrewUpload($fileKey, $crew, $prefix, false);
+                }
+            } catch (Throwable $e) {
+                // Fall through to the legacy behaviour below if anything
+                // goes wrong (DB error, missing crew, etc.) — better to
+                // save the file somewhere than to lose it.
+                error_log('[SVSML-ERP] uploadFile crew-route fallback: ' . $e->getMessage());
+            }
+        }
+    }
+    if (preg_match('#^contracts/(\d+)$#', trim($subDir, '/'), $m)) {
+        global $pdo;
+        if (isset($pdo) && $pdo instanceof PDO) {
+            try {
+                $crew = fetchCrewWithJoins($pdo, (int)$m[1]);
+                if ($crew && function_exists('saveCrewUpload')) {
+                    // Contract PDFs / photos go into a `contracts/`
+                    // subfolder under the canonical crew folder.
+                    return saveCrewUpload($fileKey, $crew, $prefix, false, 'contracts');
+                }
+            } catch (Throwable $e) {
+                error_log('[SVSML-ERP] uploadFile contracts-route fallback: ' . $e->getMessage());
+            }
+        }
+    }
+
+    // ---- legacy fallback: write under uploads/{subDir}/{prefix}_{owner}_{ts}.{ext} ----
     $targetDir = rtrim(UPLOAD_DIR, '/') . '/' . trim($subDir, '/');
     if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
         throw new RuntimeException('Could not create upload directory.');

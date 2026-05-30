@@ -19,7 +19,7 @@ require __DIR__ . '/config/app.php';
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/helpers.php';
 
-requireCrew();
+requireOnboardedCrew($pdo);
 
 $crewId = currentCrewId();
 if (!$crewId) {
@@ -101,19 +101,9 @@ $st = $pdo->prepare("SELECT COUNT(*) FROM contracts WHERE crew_id = :c AND clien
 $st->execute([':c' => $crewId]);
 $pendingClientContracts = (int)$st->fetchColumn();
 
-// Approvals — they should know what they owe / what's been approved.
-$st = $pdo->prepare("SELECT COALESCE(SUM(cost),0) FROM client_approvals WHERE crew_id = :c");
-$st->execute([':c' => $crewId]);
-$clientApprTotal = (float)$st->fetchColumn();
-
-$st = $pdo->prepare(
-    "SELECT COALESCE(SUM(total_amount),0)   AS total,
-            COALESCE(SUM(paid_amount),0)    AS paid,
-            COALESCE(SUM(pending_amount),0) AS pending
-       FROM svsml_approvals WHERE crew_id = :c"
-);
-$st->execute([':c' => $crewId]);
-$svsmlSummary = $st->fetch() ?: ['total' => 0, 'paid' => 0, 'pending' => 0];
+/* NOTE: approval-related queries (client_approvals / svsml_approvals)
+ * are intentionally NOT loaded here. Crew never see financial / dues
+ * data — that's an admin / staff concern. */
 
 $pageTitle  = 'My Profile — Overview';
 $currentTab = 'overview';
@@ -206,22 +196,12 @@ $photoUrl = crewPhotoUrl($latestContract);
 </div>
 
 <div class="card">
-    <h3 class="card-title">Approvals & dues</h3>
-    <div class="kpi-grid">
-        <?= portalKpi('Client approvals (total)',  number_format($clientApprTotal, 2), '', asset('crew-portal-approvals.php')) ?>
-        <?= portalKpi('SVSML — total agreed',  number_format((float)$svsmlSummary['total'], 2),   '', asset('crew-portal-approvals.php')) ?>
-        <?= portalKpi('SVSML — paid',          number_format((float)$svsmlSummary['paid'], 2),    'green', asset('crew-portal-approvals.php')) ?>
-        <?= portalKpi('SVSML — pending',       number_format((float)$svsmlSummary['pending'], 2),
-                      ((float)$svsmlSummary['pending']) > 0 ? 'yellow' : '', asset('crew-portal-approvals.php')) ?>
-    </div>
-</div>
-
-<div class="card">
     <h3 class="card-title">Need to update something?</h3>
     <p class="help-text">
-        This portal is read-only by design. To update any of your records,
-        please contact SVSML — your manning agent will make the change for you.
-        You can change your portal password yourself from the
+        Documents, medical certificates, courses and travel can be uploaded
+        directly from the relevant tabs above. To update personal details,
+        bank info or next-of-kin, please contact SVSML — your manning agent
+        will make the change for you. Change your portal password from the
         <a href="<?= asset('crew-portal-password.php') ?>">Password</a> tab.
     </p>
 </div>
