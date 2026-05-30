@@ -107,6 +107,31 @@ function loginUser(array $user): void
         'email'     => $user['email'],
         'role'      => $user['role'],
     ];
+    // Backwards-compat alias: an older deployed copy of any edit page
+    // may still read $_SESSION['user_id'] directly. Mirroring it here
+    // means foreign-key writes (created_by) keep working until the
+    // updated PHP files reach production.
+    $_SESSION['user_id'] = (int)$user['id'];
+}
+
+/**
+ * Returns the staff/admin user id for the currently signed-in session,
+ * or null when no staff user is logged in (including when a crew user
+ * is signed in via the portal — they don't have a row in `users`).
+ *
+ * Use this in any code path that needs a `created_by` value: it gives
+ * a single source of truth and avoids the historic
+ * $_SESSION['user_id'] vs $_SESSION['user']['id'] confusion.
+ */
+function currentUserId(): ?int
+{
+    if (isset($_SESSION['user']['id']) && $_SESSION['user']['id'] !== null) {
+        return (int)$_SESSION['user']['id'];
+    }
+    if (isset($_SESSION['user_id']) && $_SESSION['user_id'] !== null) {
+        return (int)$_SESSION['user_id'];
+    }
+    return null;
 }
 
 /* =========================================================
@@ -167,6 +192,11 @@ function loginCrew(PDO $pdo, array $crewRow): void
         'email'     => $crewRow['passport_number'] ?? '',
         'role'      => 'crew',
     ];
+    // Backwards-compat alias: keep $_SESSION['user_id'] null for crew
+    // sessions (they have no users.id) so any code path that reads it
+    // and writes to created_by either skips the column or stores NULL,
+    // never accidentally an unrelated id.
+    $_SESSION['user_id'] = null;
     try {
         $pdo->prepare("UPDATE crew SET last_login_at = CURRENT_TIMESTAMP WHERE id = :i")
             ->execute([':i' => (int)$crewRow['id']]);

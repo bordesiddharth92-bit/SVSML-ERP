@@ -2,18 +2,9 @@
 /**
  * SVSML-ERP — Crew sign in
  *
- * Module 16.
- *
- * Crew members sign in with their passport number + password.
- * The password is set/reset by an admin from the crew profile.
- *
- * Login is gated by:
- *   - system_settings.crew_self_login_enabled  (master switch)
- *   - crew.crew_access_enabled                 (per-crew opt-in)
- *   - crew.password_hash                       (must be set)
- *
- * Failures all return the same generic error so that an attacker can't
- * enumerate which passport numbers exist in the system.
+ * Module 16. Premium maritime split layout, mirrors login.php in
+ * style but takes passport number + password and gates on the
+ * master switch + per-crew access flag.
  */
 
 require __DIR__ . '/config/app.php';
@@ -21,7 +12,6 @@ require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/helpers.php';
 
 if (isLoggedIn()) {
-    // If they're already crew, send them to the portal. Otherwise dashboard.
     $role = $_SESSION['user']['role'] ?? '';
     header('Location: ' . url($role === 'crew' ? 'crew-portal.php' : 'dashboard.php'));
     exit;
@@ -62,54 +52,85 @@ $pageTitle = 'Crew sign in';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title>Crew sign in &mdash; <?= h(APP_NAME) ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="<?= asset('assets/css/style.css') ?>">
 </head>
 <body>
 <div class="auth-wrap">
-    <div class="auth-card">
-        <h1><?= h(APP_SHORT) ?></h1>
-        <p class="subtitle">Crew sign in</p>
-
-        <?php if (!$loginEnabled): ?>
-            <div class="flash flash-warning">
-                Crew self-service login is currently disabled by the administrator.
-                Please contact SVSML for assistance.
+    <aside class="auth-art">
+        <div class="auth-art-brand">
+            <div class="brand-logo"><?= h(APP_SHORT) ?></div>
+            <div class="auth-art-brand-text">
+                <div class="top"><?= h(APP_SHORT) ?></div>
+                <div class="sub">Crew self-service portal</div>
             </div>
-        <?php else: ?>
-            <?php if ($err): ?>
-                <div class="flash flash-error"><?= h($err) ?></div>
+        </div>
+
+        <div class="auth-art-tagline">
+            <h2>Your career, <span class="accent">one tap away</span>.</h2>
+            <p>
+                Documents, certificates, travel, contracts and approvals —
+                all in one place. Sign in with your passport number to view
+                everything SVSML has on file for you.
+            </p>
+        </div>
+
+        <div class="auth-art-foot">
+            <span>Read-only self-service</span>
+            <span>&bull;</span>
+            <span>RPSL Manning Agency</span>
+        </div>
+    </aside>
+
+    <section class="auth-form-side">
+        <div class="auth-card">
+            <h1>Welcome aboard</h1>
+            <p class="subtitle">Sign in with your passport number</p>
+
+            <?php if (!$loginEnabled): ?>
+                <div class="flash flash-warning">
+                    Crew self-service login is currently disabled by the administrator.
+                    Please contact SVSML for assistance.
+                </div>
+            <?php else: ?>
+                <?php if ($err): ?>
+                    <div class="flash flash-error"><?= h($err) ?></div>
+                <?php endif; ?>
+
+                <?php foreach (getFlashes() as $f): ?>
+                    <div class="flash flash-<?= h($f['type']) ?>"><?= h($f['message']) ?></div>
+                <?php endforeach; ?>
+
+                <form method="post" action="<?= asset('crew-login.php') ?>" novalidate>
+                    <div class="form-row">
+                        <label for="passport_number">Passport number</label>
+                        <input type="text" id="passport_number" name="passport_number"
+                               autocomplete="username" required value="<?= h($passport) ?>"
+                               placeholder="e.g. N1234567">
+                    </div>
+                    <div class="form-row">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password"
+                               autocomplete="current-password" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Sign in</button>
+                    </div>
+                </form>
+
+                <p class="help-text" style="margin-top:14px;">
+                    First time here? Your password is set by SVSML &mdash; please
+                    contact your manning agent if you don't have one yet.
+                </p>
             <?php endif; ?>
 
-            <?php foreach (getFlashes() as $f): ?>
-                <div class="flash flash-<?= h($f['type']) ?>"><?= h($f['message']) ?></div>
-            <?php endforeach; ?>
-
-            <form method="post" action="<?= asset('crew-login.php') ?>" novalidate>
-                <div class="form-row">
-                    <label for="passport_number">Passport number</label>
-                    <input type="text" id="passport_number" name="passport_number"
-                           autocomplete="username" required value="<?= h($passport) ?>">
-                </div>
-                <div class="form-row">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password"
-                           autocomplete="current-password" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn">Sign in</button>
-                </div>
-            </form>
-
-            <p class="help-text" style="margin-top:14px;">
-                First time here? Your password is set by SVSML — please contact your
-                manning agent if you don't have one yet.
-            </p>
-        <?php endif; ?>
-
-        <div class="auth-switch">
-            Staff member? <a href="<?= asset('login.php') ?>">Sign in here</a>
+            <div class="auth-switch">
+                Staff member? <a href="<?= asset('login.php') ?>">Sign in to the staff portal</a>
+            </div>
         </div>
-    </div>
+    </section>
 </div>
 </body>
 </html>
