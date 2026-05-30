@@ -195,3 +195,40 @@ ALTER TABLE `contracts`         MODIFY COLUMN `photo_path`           VARCHAR(500
 --
 -- The migration is idempotent — re-running this file is safe.
 -- =============================================================
+
+
+
+-- =============================================================
+-- Module 18 follow-up — sort_order columns
+--
+-- The crew portal documents / medical pages used to ORDER BY
+-- sort_order on dropdown_items, which silently broke production
+-- because the column didn't exist on `dropdown_items`. The PHP
+-- queries have been switched to ORDER BY id ASC (root cause fix),
+-- and we add a sort_order column to:
+--   * dropdown_items   — defensive, in case any future query needs it
+--   * crew_documents   — per spec, for future row ordering UX
+--   * crew_medical     — same
+-- All three default to 0 so existing rows keep their natural order.
+-- =============================================================
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dropdown_items' AND COLUMN_NAME = 'sort_order');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `dropdown_items` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0 AFTER `is_active`',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'crew_documents' AND COLUMN_NAME = 'sort_order');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `crew_documents` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @col = (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'crew_medical' AND COLUMN_NAME = 'sort_order');
+SET @sql = IF(@col = 0,
+    'ALTER TABLE `crew_medical` ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0',
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
