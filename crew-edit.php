@@ -77,6 +77,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    /* ----- Module 18: view / edit crew onboarding & additional details ----- */
+    if ($action === 'save_onboarding' && $postId > 0) {
+        $obCols = tableColumnSet($pdo, 'crew');
+        $obHas  = fn (string $c): bool => isset($obCols[$c]);
+
+        $placeBirth     = trim($_POST['place_of_birth'] ?? '');
+        $nationality    = trim($_POST['nationality']    ?? '');
+        $cdc            = normalizeUpperTrim($_POST['cdc_number'] ?? '');
+        $expectedDep    = trim($_POST['expected_departure_date'] ?? '');
+        $contractPeriod = trim($_POST['contract_period_months']  ?? '');
+        $holder         = trim($_POST['bank_account_holder'] ?? '');
+        $accNo          = trim($_POST['bank_account_no']     ?? '');
+        $bank           = trim($_POST['bank_name']           ?? '');
+        $ifsc           = strtoupper(trim($_POST['bank_ifsc'] ?? ''));
+
+        $errors = [];
+        if ($expectedDep !== '' && DateTime::createFromFormat('Y-m-d', $expectedDep) === false) $errors[] = 'Invalid expected departure date.';
+        if ($cdc !== '' && ($e = validateCDCField($cdc)) !== null) $errors[] = $e;
+        if ($accNo !== '' && !preg_match('/^[A-Z0-9]{6,30}$/i', $accNo)) $errors[] = 'Account number must be 6–30 alphanumeric characters.';
+        if ($ifsc !== '' && !preg_match('/^[A-Z]{4}0[A-Z0-9]{6}$/', $ifsc)) $errors[] = 'IFSC must be in the standard 11-character format (e.g. SBIN0001234).';
+
+        $kinJson = null;
+        if ($obHas('next_of_kin')) $kinJson = collectNextOfKinFromPost($_POST, $errors, false);
+
+        if (!empty($errors)) {
+            foreach ($errors as $e) flash('error', $e);
+        } else {
+            $optional = [
+                'place_of_birth'          => $placeBirth     !== '' ? $placeBirth     : null,
+                'nationality'             => $nationality    !== '' ? $nationality    : null,
+                'cdc_number'              => $cdc            !== '' ? $cdc            : null,
+                'expected_departure_date' => $expectedDep    !== '' ? $expectedDep    : null,
+                'contract_period_months'  => $contractPeriod !== '' ? $contractPeriod : null,
+                'bank_account_holder'     => $holder         !== '' ? $holder         : null,
+                'bank_account_no'         => $accNo          !== '' ? $accNo          : null,
+                'bank_name'               => $bank           !== '' ? $bank           : null,
+                'bank_ifsc'               => $ifsc           !== '' ? $ifsc           : null,
+            ];
+            $fields = [];
+            $params = [':i' => $postId];
+            foreach ($optional as $col => $val) {
+                if ($obHas($col)) { $fields[] = "`{$col}` = :{$col}"; $params[':' . $col] = $val; }
+            }
+            if ($obHas('next_of_kin')) { $fields[] = 'next_of_kin = :nok'; $params[':nok'] = $kinJson; }
+
+            if (empty($fields)) {
+                flash('error', 'Onboarding columns are not present yet — apply CHANGES.sql first.');
+            } else {
+                if ($obHas('updated_at')) $fields[] = 'updated_at = CURRENT_TIMESTAMP';
+                try {
+                    $pdo->prepare('UPDATE crew SET ' . implode(', ', $fields) . ' WHERE id = :i')->execute($params);
+                    logActivity($pdo, $user['id'], 'update', 'crew', $postId, "Updated onboarding details for crew {$postId}");
+                    flash('success', 'Onboarding details saved.');
+                } catch (PDOException $e) {
+                    error_log('[SVSML-ERP] save_onboarding: ' . $e->getMessage());
+                    flash('error', 'Database error — has CHANGES.sql been applied?');
+                }
+            }
+        }
+        header('Location: ' . url('crew-edit.php?id=' . $postId));
+        exit;
+    }
+
     if ($action === 'save') {
         // ---- gather ------------------------------------------------
         $fullName       = trim($_POST['full_name']       ?? '');
@@ -596,6 +659,181 @@ if ($isEditing && $canToggleAccess):
                         Clear password
                     </button>
                 <?php endif; ?>
+            </div>
+        </form>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php
+// -------------------------------------------------------------
+// Module 18 — Crew onboarding & additional details (admin/staff view).
+// Shows everything the crew captured during onboarding, editable here so
+// staff can correct it. Degrades gracefully when CHANGES.sql is pending.
+// -------------------------------------------------------------
+if ($isEditing):
+    $obCols = tableColumnSet($pdo, 'crew');
+    $obHas  = fn (string $c): bool => isset($obCols[$c]);
+    $obExtended = $obHas('place_of_birth') || $obHas('nationality') || $obHas('cdc_number')
+        || $obHas('expected_departure_date') || $obHas('contract_period_months')
+        || $obHas('bank_account_holder') || $obHas('bank_account_no')
+        || $obHas('bank_name') || $obHas('bank_ifsc') || $obHas('next_of_kin');
+
+    $obKin = decodeNextOfKinJson($crew['next_of_kin'] ?? null);
+    while (count($obKin) < 2) $obKin[] = emptyNextOfKin();
+    $obCountries = TRAVEL_COUNTRIES;
+
+    $onbComplete = $obHas('onboarding_complete') ? (int)($crew['onboarding_complete'] ?? 0) : null;
+?>
+<div class="card">
+    <h3 class="card-title">Onboarding &amp; additional details</h3>
+
+    <?php if (!$obExtended): ?>
+        <div class="flash flash-warning">
+            <strong>Database migration pending.</strong>
+            The onboarding columns aren't present on the <code>crew</code> table yet.
+            Run <code>CHANGES.sql</code> to enable place of birth, nationality, CDC,
+            bank details and next-of-kin capture.
+        </div>
+    <?php else: ?>
+        <p class="help-text">
+            Status:
+            <?php if ($onbComplete === 1): ?>
+                <span class="status status-green">Onboarding complete</span>
+                <?php if (!empty($crew['onboarded_at'])): ?> · finished <?= h($crew['onboarded_at']) ?><?php endif; ?>
+            <?php elseif ($onbComplete === 0): ?>
+                <span class="status status-yellow">Onboarding pending</span> — the crew will be asked to complete it on next sign-in.
+            <?php endif; ?>
+            <?php if ($obHas('last_login_at') && !empty($crew['last_login_at'])): ?>
+                · last portal login <?= h($crew['last_login_at']) ?>
+            <?php endif; ?>
+            <?php if ($obHas('profile_photo') && !empty($crew['profile_photo'])): ?>
+                · <a href="<?= h(asset('uploads/' . $crew['profile_photo'])) ?>" target="_blank" rel="noopener">Profile photo</a>
+            <?php endif; ?>
+        </p>
+
+        <form method="post" action="<?= asset('crew-edit.php?id=' . (int)$crew['id']) ?>" novalidate>
+            <?= csrfField() ?>
+            <input type="hidden" name="action"  value="save_onboarding">
+            <input type="hidden" name="crew_id" value="<?= (int)$crew['id'] ?>">
+
+            <div class="form-grid">
+                <?php if ($obHas('place_of_birth')): ?>
+                <div class="form-row">
+                    <label for="ob_place_of_birth">Place of birth</label>
+                    <input type="text" id="ob_place_of_birth" name="place_of_birth" maxlength="100"
+                           value="<?= h($crew['place_of_birth'] ?? '') ?>">
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('nationality')): ?>
+                <div class="form-row">
+                    <label for="ob_nationality">Nationality</label>
+                    <input list="ob-countries" id="ob_nationality" name="nationality" maxlength="80"
+                           value="<?= h($crew['nationality'] ?? '') ?>" autocomplete="off">
+                    <datalist id="ob-countries">
+                        <?php foreach ($obCountries as $c): ?><option value="<?= h($c) ?>"></option><?php endforeach; ?>
+                    </datalist>
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('cdc_number')): ?>
+                <div class="form-row">
+                    <label for="ob_cdc_number">Seaman / CDC book number</label>
+                    <input type="text" id="ob_cdc_number" name="cdc_number" maxlength="50" data-validate="cdc"
+                           value="<?= h($crew['cdc_number'] ?? '') ?>" placeholder="MUM123456">
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('expected_departure_date')): ?>
+                <div class="form-row">
+                    <label for="ob_expected_departure_date">Expected date of departure</label>
+                    <input type="date" id="ob_expected_departure_date" name="expected_departure_date"
+                           value="<?= h($crew['expected_departure_date'] ?? '') ?>">
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('contract_period_months')): ?>
+                <div class="form-row">
+                    <label for="ob_contract_period_months">Contract period</label>
+                    <input type="text" id="ob_contract_period_months" name="contract_period_months" maxlength="50"
+                           value="<?= h($crew['contract_period_months'] ?? '') ?>" placeholder="e.g. 6 months &plusmn; 1">
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($obHas('bank_account_holder') || $obHas('bank_account_no') || $obHas('bank_name') || $obHas('bank_ifsc')): ?>
+            <div class="section-title">Bank details</div>
+            <div class="form-grid">
+                <?php if ($obHas('bank_account_holder')): ?>
+                <div class="form-row">
+                    <label for="ob_bank_account_holder">Account holder name</label>
+                    <input type="text" id="ob_bank_account_holder" name="bank_account_holder" maxlength="120"
+                           value="<?= h($crew['bank_account_holder'] ?? '') ?>">
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('bank_account_no')): ?>
+                <div class="form-row">
+                    <label for="ob_bank_account_no">Account number</label>
+                    <input type="text" id="ob_bank_account_no" name="bank_account_no" maxlength="50"
+                           value="<?= h($crew['bank_account_no'] ?? '') ?>">
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('bank_name')): ?>
+                <div class="form-row">
+                    <label for="ob_bank_name">Bank name</label>
+                    <input type="text" id="ob_bank_name" name="bank_name" maxlength="120"
+                           value="<?= h($crew['bank_name'] ?? '') ?>">
+                </div>
+                <?php endif; ?>
+                <?php if ($obHas('bank_ifsc')): ?>
+                <div class="form-row">
+                    <label for="ob_bank_ifsc">IFSC code</label>
+                    <input type="text" id="ob_bank_ifsc" name="bank_ifsc" maxlength="20" placeholder="SBIN0001234"
+                           style="text-transform: uppercase;" value="<?= h($crew['bank_ifsc'] ?? '') ?>">
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($obHas('next_of_kin')): ?>
+            <div class="section-title">Next of kin <small style="font-weight:400;color:var(--text-muted)">(up to 2)</small></div>
+            <?php for ($i = 0; $i < 2; $i++): $row = $obKin[$i]; ?>
+                <div class="form-grid" style="margin-bottom:6px">
+                    <div class="form-row">
+                        <label>Kin #<?= $i + 1 ?> — name</label>
+                        <input type="text" name="kin[<?= $i ?>][name]" maxlength="100" value="<?= h($row['name']) ?>">
+                    </div>
+                    <div class="form-row">
+                        <label>Relation</label>
+                        <input type="text" name="kin[<?= $i ?>][relation]" maxlength="50" value="<?= h($row['relation']) ?>">
+                    </div>
+                    <div class="form-row full-row">
+                        <label>Address</label>
+                        <textarea name="kin[<?= $i ?>][address]" rows="2"><?= h($row['address']) ?></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>Percentage</label>
+                        <input type="number" step="0.01" min="0" max="100" name="kin[<?= $i ?>][percentage]"
+                               value="<?= h($row['percentage']) ?>" placeholder="0–100">
+                    </div>
+                    <div class="form-row">
+                        <label>Email</label>
+                        <input type="email" name="kin[<?= $i ?>][email]" maxlength="100" data-validate="email"
+                               value="<?= h($row['email']) ?>">
+                    </div>
+                    <div class="form-row">
+                        <label>Mobile 1</label>
+                        <input type="text" name="kin[<?= $i ?>][mobile1]" maxlength="20" data-validate="mobile"
+                               value="<?= h($row['mobile1']) ?>">
+                    </div>
+                    <div class="form-row">
+                        <label>Mobile 2</label>
+                        <input type="text" name="kin[<?= $i ?>][mobile2]" maxlength="20" data-validate="mobile"
+                               value="<?= h($row['mobile2']) ?>">
+                    </div>
+                </div>
+            <?php endfor; ?>
+            <?php endif; ?>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Save onboarding details</button>
             </div>
         </form>
     <?php endif; ?>

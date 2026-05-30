@@ -25,6 +25,16 @@ if (!defined('BASE_URL')) {
 }
 
 /**
+ * Maximum size (in bytes) accepted for any crew / contract file upload.
+ * Referenced by includes/upload-paths.php (saveCrewUpload) and the
+ * onboarding / profile photo uploads. Defined here — the single
+ * application bootstrap — so every entry point has it available.
+ */
+if (!defined('UPLOAD_MAX_SIZE')) {
+    define('UPLOAD_MAX_SIZE', 10 * 1024 * 1024); // 10 MB
+}
+
+/**
  * Build a URL relative to BASE_URL.
  *
  * With BASE_URL = '/' (subdomain root):

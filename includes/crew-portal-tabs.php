@@ -15,7 +15,7 @@ if (!isset($currentTab)) $currentTab = '';
 
 $portalTabs = [
     'overview'   => ['label' => 'Overview',   'href' => 'crew-portal.php'],
-    'personal'   => ['label' => 'Personal',   'href' => 'crew-portal-personal.php'],
+    'personal'   => ['label' => 'My Profile', 'href' => 'crew-portal-personal.php'],
     'documents'  => ['label' => 'Documents',  'href' => 'crew-portal-documents.php'],
     'medical'    => ['label' => 'Medical',    'href' => 'crew-portal-medical.php'],
     'courses'    => ['label' => 'Courses',    'href' => 'crew-portal-courses.php'],
