@@ -495,6 +495,63 @@ function columnExists(PDO $pdo, string $table, string $column): bool
     return isset(tableColumnSet($pdo, $table)[$column]);
 }
 
+/* ---------------- Crew document types ---------------- */
+
+/**
+ * Canonical list of crew document types: ENUM slug => human label.
+ *
+ * The slug is stored in crew_documents.document_type (an ENUM kept in
+ * sync by CHANGES.sql). This is the single source of truth shared by the
+ * admin documents page (crew-documents.php), the crew portal documents
+ * page (crew-portal-documents.php) and the alerts list (alerts.php), so
+ * every screen always offers the exact same option list.
+ *
+ * When adding a slug here, also extend the ENUM via CHANGES.sql.
+ */
+function documentTypeOptions(): array
+{
+    return [
+        'cv'                => 'CV / Resume',
+        'passport'          => 'Passport',
+        'cdc'               => 'CDC (Continuous Discharge Certificate)',
+        'visa'              => 'Visa',
+        'sid'               => 'SID (Seafarer Identity Document)',
+        'stcw_basic'        => 'STCW Basic Safety Certificate',
+        'stcw_aff'          => 'STCW Advanced Fire Fighting',
+        'stcw_psc'          => 'STCW Proficiency in Survival Craft',
+        'stcw_mfa'          => 'STCW Medical First Aid',
+        'stcw_gmdss'        => 'STCW GMDSS',
+        'stcw_tanker'       => 'STCW Tanker (Oil/Chemical/Gas)',
+        'bst'               => 'BST Certificate',
+        'watchkeeping'      => 'Watchkeeping Certificate',
+        'coc'               => 'COC (Certificate of Competency)',
+        'cop'               => 'COP (Certificate of Proficiency)',
+        'flag_endorsement'  => 'Flag State Endorsement',
+        'yellow_fever'      => 'Yellow Fever Certificate',
+        'police_clearance'  => 'Police Clearance Certificate',
+        'birth_certificate' => 'Birth Certificate',
+        'pan_card'          => 'PAN Card',
+        'aadhar_card'       => 'Aadhar Card',
+        'bank_passbook'     => 'Bank Passbook / Cheque',
+        'noc'               => 'NOC (No Objection Certificate)',
+        'experience_letter' => 'Experience Letter',
+        'other'             => 'Other',
+    ];
+}
+
+/**
+ * Resolve a document_type slug to its human label, falling back to a
+ * title-cased version of the slug for any legacy / unknown value so the
+ * UI never shows a raw "stcw_gmdss".
+ */
+function documentTypeLabel(?string $slug): string
+{
+    $slug = (string)$slug;
+    $opts = documentTypeOptions();
+    if (isset($opts[$slug])) return $opts[$slug];
+    return $slug === '' ? '—' : ucwords(str_replace('_', ' ', $slug));
+}
+
 /* ---------------- Next-of-kin (crew.next_of_kin JSON) ---------------- */
 
 /**

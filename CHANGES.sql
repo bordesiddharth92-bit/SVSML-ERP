@@ -277,3 +277,73 @@ SET @sql = IF(@col = 0,
     'ALTER TABLE `companies` ADD COLUMN `email` VARCHAR(150) NULL DEFAULT NULL AFTER `contact_number`',
     'SELECT 1');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+
+-- =============================================================
+-- Module 5 — More document & medical type options
+--
+-- Document types are stored as the crew_documents.document_type ENUM, so
+-- adding new options means widening the ENUM. Medical types are data in
+-- dropdown_items (category = 'medical_type'), so adding new options means
+-- inserting rows. Both halves are idempotent and re-run safe.
+--
+-- The PHP layer reads document types from documentTypeOptions() in
+-- includes/helpers.php — keep the ENUM list below in sync with it.
+-- =============================================================
+
+-- --- Documents: widen the crew_documents.document_type ENUM -----------
+-- Guard on a distinctive new value ('coc') so re-running is a no-op.
+SET @docenum = (SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME   = 'crew_documents'
+                   AND COLUMN_NAME  = 'document_type'
+                   AND COLUMN_TYPE LIKE '%''coc''%');
+SET @sql = IF(@docenum = 0,
+    "ALTER TABLE `crew_documents` MODIFY COLUMN `document_type` ENUM('cv','passport','cdc','visa','sid','stcw_basic','stcw_aff','stcw_psc','stcw_mfa','stcw_gmdss','stcw_tanker','bst','watchkeeping','coc','cop','flag_endorsement','yellow_fever','police_clearance','birth_certificate','pan_card','aadhar_card','bank_passbook','noc','experience_letter','other') NOT NULL",
+    'SELECT 1');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+-- --- Medical: add standard maritime medical / vaccination types -------
+-- dropdown_items has no UNIQUE(category,label), so each insert is guarded
+-- with WHERE NOT EXISTS. Existing seeded rows (ENG1, Yellow Fever, Indian
+-- Medical Certificate, Other) are left untouched so crew_medical rows that
+-- reference them keep working.
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'ENG1 Medical Certificate' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='ENG1 Medical Certificate');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'ML5 Medical Certificate' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='ML5 Medical Certificate');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'INDOS Medical' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='INDOS Medical');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Fitness Certificate' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Fitness Certificate');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Yellow Fever Vaccination' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Yellow Fever Vaccination');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Covid Vaccination Certificate' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Covid Vaccination Certificate');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Hepatitis B Vaccination' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Hepatitis B Vaccination');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Typhoid Vaccination' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Typhoid Vaccination');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Blood Group Report' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Blood Group Report');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Eye Test Certificate' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Eye Test Certificate');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Dental Certificate' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Dental Certificate');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Drug & Alcohol Test' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Drug & Alcohol Test');
+INSERT INTO `dropdown_items` (`category`, `label`)
+SELECT 'medical_type', 'Other' FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `dropdown_items` WHERE `category`='medical_type' AND `label`='Other');

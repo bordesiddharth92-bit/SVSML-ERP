@@ -100,7 +100,7 @@ if ($type === '' || $type === 'documents') {
               LEFT JOIN ranks r ON r.id = cr.rank_id
               LEFT JOIN dropdown_items d ON d.id = cd.visa_type_id";
     foreach ($pdo->query($sql) as $r) {
-        $label = strtoupper($r['document_type']);
+        $label = documentTypeLabel($r['document_type']);
         if ($r['document_type'] === 'visa' && !empty($r['visa_type_label'])) {
             $label .= ' (' . $r['visa_type_label'] . ')';
         }
