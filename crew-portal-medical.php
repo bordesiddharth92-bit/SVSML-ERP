@@ -110,7 +110,7 @@ $medical = $stmt->fetchAll();
 $medicalTypes = $pdo->query(
     "SELECT id, label FROM dropdown_items
       WHERE category = 'medical_type' AND is_active = 1
-      ORDER BY sort_order, label"
+      ORDER BY id ASC"
 )->fetchAll();
 
 $pageTitle  = 'My Profile — Medical';
