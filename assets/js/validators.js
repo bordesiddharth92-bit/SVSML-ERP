@@ -70,15 +70,11 @@
             requiredMsg: 'Passport number is required.',
             validate: function (v, opts) {
                 if (!v) return null;
-                var country = opts && opts.country
-                    ? String(opts.country).trim().toUpperCase()
-                    : null;
-                if (country && COUNTRY_PASSPORT_FORMATS[country]) {
-                    return COUNTRY_PASSPORT_FORMATS[country].test(v)
-                        ? null
-                        : 'Invalid passport number format.';
-                }
-                return /^[A-Z0-9]{3,20}$/.test(v)
+                // Relaxed universal pattern per spec: letters / digits /
+                // hyphens / spaces, 5–20 chars. Country-specific patterns
+                // are intentionally NOT consulted any more — they were
+                // rejecting real-world passport numbers during onboarding.
+                return /^[A-Z0-9\-\s]{5,20}$/i.test(v)
                     ? null
                     : 'Invalid passport number format.';
             }
