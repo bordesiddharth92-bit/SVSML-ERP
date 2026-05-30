@@ -171,7 +171,11 @@ DROP TABLE IF EXISTS `crew_documents`;
 CREATE TABLE `crew_documents` (
     `id`              INT NOT NULL AUTO_INCREMENT,
     `crew_id`         INT NOT NULL,
-    `document_type`   ENUM('cv','passport','cdc','visa','sid') NOT NULL,
+    `document_type`   ENUM('cv','passport','cdc','visa','sid',
+                          'stcw_basic','stcw_aff','stcw_psc','stcw_mfa','stcw_gmdss','stcw_tanker',
+                          'bst','watchkeeping','coc','cop','flag_endorsement','yellow_fever',
+                          'police_clearance','birth_certificate','pan_card','aadhar_card',
+                          'bank_passbook','noc','experience_letter','other') NOT NULL,
     `visa_type_id`    INT DEFAULT NULL,
     `document_number` VARCHAR(100) DEFAULT NULL,
     `issue_date`      DATE DEFAULT NULL,

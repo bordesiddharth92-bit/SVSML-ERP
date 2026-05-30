@@ -4,8 +4,10 @@
  *
  * Module 5.
  *
- * Manages the 5 document types defined by the crew_documents.document_type
- * ENUM ('cv','passport','cdc','visa','sid') for a single crew member.
+ * Manages crew document types for a single crew member. The set of
+ * types comes from the canonical documentTypeOptions() list (helpers.php)
+ * and is backed by the crew_documents.document_type ENUM, so the admin
+ * page, the crew portal and alerts always share the same options.
  *
  * Each section shows existing entries (with file links + status badges)
  * and an "Add new" form. Visa section additionally requires a visa_type_id
@@ -40,15 +42,19 @@ if (!$crew) {
     exit;
 }
 
-// The 5 sections we render, in display order. Visa is the only one
-// that uses visa_type_id; the rest take just document_number + dates.
-$sections = [
-    'cv'       => ['label' => 'Curriculum Vitae (CV)',   'needs_visa_type' => false, 'has_dates' => false],
-    'passport' => ['label' => 'Passport',                 'needs_visa_type' => false, 'has_dates' => true],
-    'cdc'      => ['label' => 'CDC',                      'needs_visa_type' => false, 'has_dates' => true],
-    'visa'     => ['label' => 'Visa',                     'needs_visa_type' => true,  'has_dates' => true],
-    'sid'      => ['label' => 'Seafarer Identity Document (SID)', 'needs_visa_type' => false, 'has_dates' => true],
-];
+// The document sections we render, in display order, driven by the
+// canonical documentTypeOptions() list so the admin page, the crew
+// portal and alerts always share the same set. Visa is the only type
+// that uses visa_type_id; CV has no expiry, everything else takes
+// optional issue / expiry dates.
+$sections = [];
+foreach (documentTypeOptions() as $slug => $label) {
+    $sections[$slug] = [
+        'label'           => $label,
+        'needs_visa_type' => ($slug === 'visa'),
+        'has_dates'       => ($slug !== 'cv'),
+    ];
+}
 
 // -------------------------------------------------------------
 // POST handlers — add / replace / delete
@@ -218,7 +224,7 @@ $rows = $pdo->prepare(
 $rows->execute([':c' => $crewId]);
 $rows = $rows->fetchAll();
 
-$grouped = ['cv' => [], 'passport' => [], 'cdc' => [], 'visa' => [], 'sid' => []];
+$grouped = array_fill_keys(array_keys($sections), []);
 foreach ($rows as $r) {
     if (isset($grouped[$r['document_type']])) {
         $grouped[$r['document_type']][] = $r;

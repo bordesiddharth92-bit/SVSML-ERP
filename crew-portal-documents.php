@@ -20,15 +20,10 @@ if (!$crew) { logoutCurrentUser(); header('Location: ' . url('crew-login.php'));
 
 $latestContract = fetchLatestContractForCrew($pdo, $crewId);
 
-// Map doc types → human label and the canonical doctype slug used in
-// the upload filename. Visa is special — it has a separate dropdown.
-$typeLabels = [
-    'cv'       => 'CV / Resume',
-    'passport' => 'Passport',
-    'cdc'      => 'CDC',
-    'visa'     => 'Visa',
-    'sid'      => 'SID',
-];
+// Document type slug => label, shared with the admin page and alerts via
+// the canonical documentTypeOptions() list so both screens match. Visa is
+// special — it has a separate visa-type dropdown.
+$typeLabels = documentTypeOptions();
 
 // -------------------------------------------------------------
 // POST: add OR update file on an existing row
@@ -139,7 +134,7 @@ $stmt = $pdo->prepare(
 $stmt->execute([':c' => $crewId]);
 $documents = $stmt->fetchAll();
 
-$grouped = ['cv' => [], 'passport' => [], 'cdc' => [], 'visa' => [], 'sid' => []];
+$grouped = array_fill_keys(array_keys($typeLabels), []);
 foreach ($documents as $d) {
     $type = $d['document_type'] ?? 'cv';
     if (!isset($grouped[$type])) $grouped[$type] = [];

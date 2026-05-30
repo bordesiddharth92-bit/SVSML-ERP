@@ -57,9 +57,18 @@ INSERT INTO `dropdown_items` (`category`, `label`) VALUES
 
 -- medical_type
 INSERT INTO `dropdown_items` (`category`, `label`) VALUES
-    ('medical_type', 'ENG1'),
-    ('medical_type', 'Yellow Fever'),
-    ('medical_type', 'Indian Medical Certificate'),
+    ('medical_type', 'ENG1 Medical Certificate'),
+    ('medical_type', 'ML5 Medical Certificate'),
+    ('medical_type', 'INDOS Medical'),
+    ('medical_type', 'Fitness Certificate'),
+    ('medical_type', 'Yellow Fever Vaccination'),
+    ('medical_type', 'Covid Vaccination Certificate'),
+    ('medical_type', 'Hepatitis B Vaccination'),
+    ('medical_type', 'Typhoid Vaccination'),
+    ('medical_type', 'Blood Group Report'),
+    ('medical_type', 'Eye Test Certificate'),
+    ('medical_type', 'Dental Certificate'),
+    ('medical_type', 'Drug & Alcohol Test'),
     ('medical_type', 'Other');
 
 -- ship_type
